@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>PUNCH CLOCK</title>
+<meta name="description" content="A corporate boxing simulator. You've been laid off. The only way back in is through them." />
+<meta name="theme-color" content="#07050a" />
+<meta property="og:title" content="PUNCH CLOCK — a corporate boxing simulator" />
+<meta property="og:description" content="Punch your way from the mailroom to the penthouse. Brenda from HR is waiting." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500;800&family=Caveat:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🥊</text></svg>" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="touchpad" aria-hidden="true"></div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="bar-block you">
+    <div class="who"><span class="nm">YOU</span><span class="tt" id="youTitle">TEMP, NIGHT SHIFT</span></div>
+    <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    <div class="pips" id="pkd"></div>
+  </div>
+  <div class="clock">
+    <div class="floor" id="hudFloor">FLOOR B1</div>
+    <div class="digits" id="hudTime">00:00.00</div>
+    <div class="score" id="hudScore">0</div>
+  </div>
+  <div class="bar-block opp">
+    <div class="who"><span class="nm" id="oppName">KYLE</span><span class="tt" id="oppTitle">UNPAID INTERN</span></div>
+    <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    <div class="pips" id="okd"></div>
+  </div>
+  <div id="invoice" class="hidden"><b>INVOICE #0027</b><span id="invAmt">$0</span></div>
+  <div class="meter" id="meter">
+    <div class="lbl"><span>OVERTIME</span><em id="meterKey">SPACE</em></div>
+    <div class="track"><i></i><s></s><s></s><s></s></div>
+  </div>
+  <div id="combo"></div>
+  <button id="pauseBtn" data-act="pause" aria-label="Pause">❚❚</button>
+  <div id="feed" class="hidden"><div class="head"><b class="chan"></b><span class="online"></span></div><div class="msgs"></div></div>
+</div>
+
+<div id="callouts"></div>
+<div id="popups"></div>
+<div id="bubble" class="hidden"><span></span></div>
+<div id="banner" class="hidden"><small></small><b></b></div>
+<div id="count" class="hidden"></div>
+<div id="mash" class="hidden"><b></b><div class="track"><i></i></div></div>
+<div id="hint" class="hidden"></div>
+<div id="splat"></div>
+
+<!-- ============ TITLE ============ -->
+<section id="title" class="screen">
+  <div class="title-wrap">
+    <div class="card-holes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="logo"><span>PUNCH</span><span>CLOCK</span></h1>
+    <p class="sub">A CORPORATE BOXING SIMULATOR</p>
+    <p class="blurb">You've been laid off. HR says there's one opening left.<br>It's on the top floor.</p>
+    <div class="menu">
+      <button class="btn big" data-act="start">CLOCK IN</button>
+      <button class="btn shift" data-act="shift" id="shiftBtn">DAILY SHIFT</button>
+      <button class="btn" data-act="howto">HOW TO FIGHT</button>
+      <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>
+    </div>
+    <p class="press"><span class="key">PRESS ANY KEY</span><span class="tap">TAP ANYWHERE</span></p>
+  </div>
+  <p class="fine">PUNCH CLOCK is not affiliated with your employer. Any resemblance to your manager is deliberate.
+    No interns were paid in the making of this game.</p>
+</section>
+
+<!-- ============ ELEVATOR / FLOOR SELECT ============ -->
+<section id="elevator" class="screen hidden">
+  <div class="elev">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="arrow">▲</span>
+        <b id="elevFloor">B1</b>
+      </div>
+      <div class="buttons" id="floorBtns"></div>
+      <div class="panel-foot">KEEP HANDS INSIDE THE CORPORATION</div>
+    </div>
+    <div class="dossier" id="dossier">
+      <div class="d-floor" id="dFloor">FLOOR B1 — MAILROOM</div>
+      <h2 id="dName">KYLE</h2>
+      <div class="d-title" id="dTitle">UNPAID INTERN</div>
+      <p class="d-tag" id="dTag"></p>
+      <dl id="dStats"></dl>
+      <div class="d-best" id="dBest"></div>
+      <div class="memo">
+        <div class="memo-head"><b>INTERNAL MEMO</b><span>FROM: CHIEF SYNERGY OFFICER</span></div>
+        <p id="dMemo"></p>
+      </div>
+      <div class="d-actions">
+        <button class="btn big" data-act="fight" id="fightBtn">FIGHT ▶</button>
+        <button class="btn ghost" data-act="back">BACK</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DAILY SHIFT ============ -->
+<section id="shift" class="screen hidden">
+  <div class="shift-wrap">
+    <div class="paper shift-paper">
+      <div class="r-head">
+        <div><b id="sNum">DAILY SHIFT #1</b><span id="sDate"></span></div>
+        <div class="r-logo">PUNCH<br>CLOCK</div>
+      </div>
+      <div class="s-mod" id="sMod"><span>TODAY'S COMPANY POLICY</span><b></b><em></em></div>
+      <ul class="s-rules" id="sRules"></ul>
+      <div class="s-label">EQUIP ONE PERK</div>
+      <div class="s-perks" id="sPerks"></div>
+      <div class="s-best" id="sBest"></div>
+    </div>
+    <div class="r-actions">
+      <button class="btn big" data-act="startShift">START SHIFT ▶</button>
+      <button class="btn ghost" data-act="back">BACK</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHIFT REPORT ============ -->
+<section id="shiftEnd" class="screen hidden">
+  <div class="shift-wrap">
+    <div class="paper shift-paper">
+      <div class="r-head">
+        <div><b id="eNum">SHIFT REPORT</b><span>FOR IMMEDIATE DISTRIBUTION</span></div>
+        <div class="r-logo">PUNCH<br>CLOCK</div>
+      </div>
+      <div class="e-squares" id="eSquares"></div>
+      <div class="e-head" id="eHead"></div>
+      <div class="e-best" id="eBest"></div>
+      <table class="e-rows" id="eRows"></table>
+      <pre class="e-line" id="eLine"></pre>
+    </div>
+    <div class="r-actions">
+      <button class="btn big" data-act="share">SHARE ▶</button>
+      <button class="btn" data-act="copyShift">COPY RESULT</button>
+      <button class="btn ghost" data-act="shift">NEW SHIFT</button>
+      <button class="btn ghost" data-act="back">TITLE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTRO CARD ============ -->
+<section id="intro" class="screen hidden">
+  <div class="slash a"></div><div class="slash b"></div>
+  <div class="intro-floor" id="iFloor"></div>
+  <div class="intro-name" id="iName"></div>
+  <div class="intro-title" id="iTitle"></div>
+  <div class="intro-tag" id="iTag"></div>
+  <dl class="intro-stats" id="iStats"></dl>
+  <div class="intro-skip"><span class="key">PRESS ANY KEY</span><span class="tap">TAP TO SKIP</span></div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="results" class="screen hidden">
+  <div class="review">
+    <div class="paper">
+      <div class="r-head">
+        <div><b>PERFORMANCE REVIEW</b><span id="rQuarter">Q3 — CONFIDENTIAL</span></div>
+        <div class="r-logo">PUNCH<br>CLOCK</div>
+      </div>
+      <div class="r-meta"><span>EMPLOYEE: <b id="rEmp">YOU</b></span><span>REVIEWER: <b id="rOpp"></b></span></div>
+      <table id="rRows"></table>
+      <div class="r-note"><span>MANAGER'S NOTE:</span><em id="rNote"></em></div>
+      <div class="r-promo hidden" id="rPromo"><span>PROMOTED TO</span><b></b><em></em></div>
+      <div class="stamp hidden" id="rStamp"><b></b><span></span></div>
+      <div class="pb hidden" id="rPB">NEW PERSONAL BEST</div>
+    </div>
+    <div class="r-actions">
+      <button class="btn big" data-act="next" id="nextBtn">NEXT FLOOR ▶</button>
+      <button class="btn" data-act="share">SHARE CARD</button>
+      <button class="btn ghost run-hide" data-act="retry">RETRY<span class="key"> (R)</span></button>
+      <button class="btn ghost run-hide" data-act="elevator">ELEVATOR</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FIRED ============ -->
+<section id="fired" class="screen hidden">
+  <div class="fired-wrap">
+    <div class="fired-big">YOU'RE<br>FIRED</div>
+    <p id="firedLine"></p>
+    <div class="fired-by" id="firedBy"></div>
+    <div class="fired-sick" id="firedSick"></div>
+    <div class="menu row">
+      <button class="btn big" data-act="retry" id="reapplyBtn">REAPPLY<span class="key"> (R)</span></button>
+      <button class="btn" data-act="share">SHARE THE SHAME</button>
+      <button class="btn ghost run-hide" data-act="elevator">ELEVATOR</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ENDING ============ -->
+<section id="ending" class="screen hidden">
+  <div class="end-wrap">
+    <div class="end-small">EFFECTIVE IMMEDIATELY</div>
+    <div class="end-big">YOU ARE THE<br>NEW CEO</div>
+    <p>Your first act as CEO: laying off everyone you just punched.<br>Shareholders are thrilled. Nobody else is. Compensation package: exposure.</p>
+    <div class="end-memo"><b>NEW MEMO · FROM: THE BOARD</b>Congratulations on your appointment. As CEO, your first performance review is scheduled for Monday in the Mailroom. Kyle will be conducting it. He has been practising. He also signed for package #4411 on your behalf. It is a mug. It says WORLD'S BEST CEO.</div>
+    <div class="end-total" id="endTotal"></div>
+    <div class="menu row">
+      <button class="btn big" data-act="elevator">CONTINUE</button>
+      <button class="btn" data-act="share">SHARE CARD</button>
+    </div>
+    <p class="fine">Thanks for playing PUNCH CLOCK. Please return your badge on the way out.</p>
+  </div>
+</section>
+
+<!-- ============ SHARE ============ -->
+<section id="share" class="screen hidden">
+  <div class="share-wrap">
+    <div class="share-tabs hidden" id="shareTabs">
+      <button data-act="shareTab" data-tab="clip">▶ CLIP</button><button data-act="shareTab" data-tab="card">CARD</button>
+    </div>
+    <video id="shareVid" class="hidden" playsinline muted loop autoplay></video>
+    <img id="shareImg" alt="Your PUNCH CLOCK result card" />
+    <div class="menu row">
+      <button class="btn big" data-act="post">POST ON X</button>
+      <button class="btn" data-act="save" id="saveBtn">SAVE IMAGE</button>
+      <button class="btn ghost" data-act="closeShare">CLOSE</button>
+    </div>
+    <p class="share-note" id="shareNote">Save the card, then attach it to your post.</p>
+  </div>
+</section>
+
+<!-- ============ HOW TO ============ -->
+<section id="howto" class="screen hidden">
+  <div class="howto-wrap">
+    <h3>EMPLOYEE HANDBOOK · SECTION 9: FIGHTING</h3>
+    <div class="rules">
+      <div><b>1. READ</b><p>Every punch has a tell. The glove glows before it swings.</p></div>
+      <div><b>2. DODGE</b><p>Dodge <em>away</em> from the glowing glove. Hooks can be ducked; uppercuts can't. Dodge late for a <em>PERFECT</em>.</p></div>
+      <div><b>3. PUNISH</b><p>After a miss, a perfect dodge, or a taunt, they're open. Hit them. Punching a guard gets you countered.</p></div>
+      <div><b>4. OVERTIME</b><p>Fill the meter with counters and perfect dodges, then throw a HAYMAKER. The final K.O. has to be a counter, a punish or a haymaker.</p></div>
+    </div>
+    <table class="keys">
+      <tr><th></th><th>KEYBOARD</th><th>TOUCH</th><th>PAD</th></tr>
+      <tr><td>Left jab</td><td>J · Z · L-click</td><td>tap left</td><td>X / □</td></tr>
+      <tr><td>Right cross</td><td>K · X · R-click</td><td>tap right</td><td>B / ○</td></tr>
+      <tr><td>Dodge</td><td>A / D · ← / →</td><td>swipe ← / →</td><td>stick</td></tr>
+      <tr><td>Duck</td><td>S · ↓</td><td>swipe ↓</td><td>stick ↓</td></tr>
+      <tr><td>Haymaker</td><td>SPACE</td><td>swipe ↑</td><td>Y / △</td></tr>
+      <tr><td>Retry · Pause</td><td>R · ESC</td><td>tap ❚❚</td><td>SELECT · START</td></tr>
+    </table>
+    <button class="btn big" data-act="closeHowto">GOT IT</button>
+  </div>
+</section>
+
+<!-- ============ PAUSE ============ -->
+<section id="pause" class="screen hidden">
+  <div class="menu col">
+    <div class="pause-t">ON BREAK</div>
+    <button class="btn big" data-act="resume">RESUME</button>
+    <button class="btn run-hide" data-act="retry">RESTART FIGHT</button>
+    <button class="btn" data-act="howto">HOW TO FIGHT</button>
+    <button class="btn ghost" data-act="mute">TOGGLE SOUND</button>
+    <button class="btn ghost" data-act="quit" id="quitBtn">QUIT TO ELEVATOR</button>
+  </div>
+</section>
+
+<div id="rotate">TURN YOUR PHONE SIDEWAYS<br><small>(the CEO insists)</small></div>
+<div id="fallback" class="hidden">Your browser couldn't start WebGL. PUNCH CLOCK needs it to render the ring.</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
