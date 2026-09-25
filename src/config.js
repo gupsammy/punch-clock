@@ -247,6 +247,12 @@ export const FEED = {
   taunt: ['{opp} isn\'t even looking at you', 'HIT THEM WHILE THEY\'RE BUSY', 'disrespectful. punish it.', '{opp} is multitasking. rude.'],
   haymaker: ['OVERTIME?? who approved overtime', 'OVERTIME!!! (unpaid)', 'that punch had a cost center'],
   ko: ['GG', '{opp} has left the channel', 'rip {opp} 🕯️', 'who gets {opp}\'s parking spot', 'someone update the org chart', 'reacted with 🥊 x40'],
+  // one-word stream spam from lurkers when something big happens
+  spam: {
+    hit: ['OHHH', 'W', 'CLIP IT', '💀💀💀', 'LMAOOO', 'no shot', 'HR!!!', 'ratio', '🥊🥊🥊', 'ooooo', 'SHEEESH', 'he felt that', 'SEND IT TO LEGAL', '+1'],
+    hurt: ['L', 'oof', 'F', '💀', '🚑🚑', 'ice that', 'yikes', 'not the face', 'workers comp', 'unsubscribe', 'rip'],
+    ko: ['GG', 'GGGGG', 'W', 'CLIP IT', 'o7', 'F in chat for {opp}', '👑👑👑', 'LETS GOOO', 'NEW CEO??', '📉📉📉', 'promotion speedrun', 'KO KO KO'],
+  },
   idle: ['did anyone take my yogurt', 'reply-all: please stop replying all', 'is the wifi down or just me', 'who microwaved fish', 'friendly reminder: timesheets due', 'mandatory fun is at 5. attendance is being taken'],
   // people you've beaten, heckling from the sidelines
   ghosts: {

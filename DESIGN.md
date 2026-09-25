@@ -56,6 +56,8 @@ Runs in any modern browser with no build step (Three.js vendored, ES modules).
 Title (punch-card logo, attract loop) → Floor select (elevator) → Intro card (slanted name slam,
 stats, tagline) → Fight → KO slow-mo → **Performance Review** (grade, stats, share card) → next floor.
 Lose → **YOU'RE FIRED** → R to reapply.
+Menu screens change under a wipe: the swap happens behind a full cover, then an ink panel and a pink
+panel slide off. The fight itself starts with no wipe. `?clean` hides the tutorial hints, for footage.
 
 Grades: S "EXCEEDS EXPECTATIONS", A "STRONG PERFORMER", B "MEETS EXPECTATIONS", C "NEEDS IMPROVEMENT", D "PIP".
 
@@ -97,7 +99,8 @@ download otherwise). mp4 where the browser records it, webm otherwise. Longest s
 - Screens that can outgrow the viewport scroll; on narrow or short screens their action row sticks
   to the bottom, so NEXT / START is never below the fold.
 - Haptics on Android: perfect dodge, taking a hit, knockdown, KO.
-- If a fight runs under 45 fps for 2 s, the pixel ratio drops a quarter step (never below 1).
+- If a fight runs under 45 fps for 2 s, quality drops one step: MSAA 4x → 2x, then the pixel ratio a
+  quarter step at a time down to 1, then MSAA off with FXAA in its place.
 
 ## Look
 Dark arena, neon ring ropes, volumetric spotlights, crowd of office-worker silhouettes with phone flashes,

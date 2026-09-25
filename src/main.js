@@ -47,9 +47,13 @@ fx.cam = camera;
 const post = createPost(renderer, scene, camera, isCoarse ? 2 : 4);
 const input = createInput($('#touchpad'));
 
+// Fill rate, not geometry, is the cost here (4x MSAA half-float target, then bloom and grade), so a big
+// window gets no more than ~4.2M pixels a frame however dense the display.
+const MAX_PIXELS = 4.2e6;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
-  renderer.setPixelRatio(PR);
+  const pr = Math.min(PR, Math.max(1, Math.sqrt(MAX_PIXELS / (w * h))));
+  renderer.setPixelRatio(pr);
   renderer.setSize(w, h, false);
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
   camera.aspect = w / h;
@@ -58,19 +62,24 @@ function resize() {
   player.baseFov = camera.aspect >= 1.25 ? 58 : clamp(2 * Math.atan(Math.tan(hfov / 2) / camera.aspect) * 180 / Math.PI, 58, 100);
   camera.fov = player.baseFov;
   camera.updateProjectionMatrix();
-  post.setSize(w, h, PR);
+  post.setSize(w, h, pr);
 }
 window.addEventListener('resize', resize);
 resize();
 
-// Slow device: drop resolution a step at a time rather than the frame rate. Only fights count,
-// because menus idle and a hidden tab reports huge gaps.
+// Slow device: step quality down rather than the frame rate. Only fights count, because menus idle
+// and a hidden tab reports huge gaps. Order: MSAA 4x -> 2x (hard to see), then resolution a quarter
+// step at a time down to 1x, then MSAA off with FXAA in its place.
 const perf = { t: 0, n: 0 };
 function watchFrames(realDt) {
-  if (screen !== 'fight' || paused || PR <= 1) return;
+  if (screen !== 'fight' || paused || (PR <= 1 && post.samples === 0)) return;
   perf.t += realDt; perf.n++;
   if (perf.t < 2) return;
-  if (perf.n / perf.t < 45) { PR = Math.max(1, PR - 0.25); resize(); }
+  if (perf.n / perf.t < 45) {
+    if (post.samples > 2) post.setSamples(2);
+    else if (PR > 1) { PR = Math.max(1, PR - 0.25); resize(); }
+    else post.setSamples(0);
+  }
   perf.t = 0; perf.n = 0;
 }
 
@@ -139,11 +148,23 @@ ui.setProjector(() => {
   return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight };
 });
 
+const wipe = $('#wipe');
+wipe.addEventListener('animationend', () => wipe.classList.remove('go'));
 function show(id) {
+  const from = document.querySelector(':is(#title, #elevator, #shift, #shiftEnd, #intro, #results, #fired, #ending):not(.hidden)');
+  // wipe between menu screens; into the fight (id null) the intro card clears on its own
+  if (id && from && from.id !== id) { wipe.classList.remove('go'); void wipe.offsetWidth; wipe.classList.add('go'); }
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('hidden', s.id !== id);
   const btn = document.querySelector(`#${id} .btn.big`);
   if (btn && !isCoarse) setTimeout(() => btn.focus({ preventScroll: true }), 50);
 }
+// a soft tick when the pointer lands on a new menu button
+let hovered = null;
+document.addEventListener('pointerover', (e) => {
+  const b = e.pointerType === 'mouse' && e.target.closest('.btn, .fbtn:not(.locked), .perk');
+  if (b && b !== hovered) audio.uiMove();
+  hovered = b || null;
+});
 function overlay(id, on) { $('#' + id).classList.toggle('hidden', !on); }
 
 // ---------- title ----------
@@ -811,8 +832,11 @@ function step() {
 toTitle();
 frame();
 
-// ?fight=N jumps straight into floor N (handy for testing a specific opponent)
-const qFight = new URLSearchParams(location.search).get('fight');
+// ?fight=N jumps straight into floor N (handy for testing a specific opponent); ?clean hides the
+// tutorial hints, for capturing footage
+const qs = new URLSearchParams(location.search);
+document.body.classList.toggle('clean', qs.has('clean'));
+const qFight = qs.get('fight');
 if (qFight !== null && ROSTER[+qFight]) { startIntro(+qFight); introT = 99; beginFight(); }
 
 // debugging hook for automated checks

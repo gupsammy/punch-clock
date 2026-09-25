@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 // Render → bloom → one "grade" pass that does every screen effect at once
 // (fewer full-screen passes matters on phones) → output (tone map + sRGB).
@@ -69,6 +70,10 @@ export function createPost(renderer, scene, camera, samples = 4) {
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
   composer.addPass(new OutputPass());
+  // the cheap fallback once a slow GPU has lost its multisampling (see setSamples)
+  const fxaa = new ShaderPass(FXAAShader);
+  fxaa.enabled = samples === 0;
+  composer.addPass(fxaa);
   const u = grade.uniforms;
 
   const fx = { hurt: 0, flash: 0, invert: 0, ca: 0, lowHp: 0, dark: 0, sat: 1 };
@@ -78,6 +83,13 @@ export function createPost(renderer, scene, camera, samples = 4) {
       composer.setPixelRatio(pr);
       composer.setSize(w, h);
       u.res.value.set(w * pr, h * pr);
+      fxaa.uniforms.resolution.value.set(1 / (w * pr), 1 / (h * pr));
+    },
+    get samples() { return composer.renderTarget1.samples; },
+    // MSAA on the half-float target is the priciest part of a frame after fill rate; 0 swaps in FXAA
+    setSamples(n) {
+      for (const t of [composer.renderTarget1, composer.renderTarget2]) { t.samples = n; t.dispose(); }
+      fxaa.enabled = n === 0;
     },
     pulse(kind, amount = 1) {
       if (kind === 'hurt') fx.hurt = Math.min(1, fx.hurt + amount);
