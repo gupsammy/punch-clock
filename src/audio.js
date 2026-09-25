@@ -101,9 +101,22 @@ function init() {
 
     setInterval(tick, TICK_MS);
   }
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+  if (ctx.state !== 'running' && !document.hidden) ctx.resume().catch(() => {});
   if (pending) { const p = pending; pending = null; playMusic(...p); }
 }
+
+// A backgrounded tab keeps a running AudioContext playing, and with the iOS "playback" session the
+// music carries on from the lock screen. Suspending freezes currentTime, so the scheduler resumes on
+// the same beat. iOS may leave the context "interrupted" after a switch; the next tap's init() resumes it.
+function sleep() {
+  try { window.speechSynthesis?.cancel(); } catch { /* no speech */ }
+  if (ctx) ctx.suspend().catch(() => {});
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) sleep();
+  else if (ctx) ctx.resume().catch(() => {});
+});
+window.addEventListener('pagehide', sleep);
 
 function setMuted(b) {
   muted = !!b;
