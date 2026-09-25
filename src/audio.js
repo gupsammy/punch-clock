@@ -74,6 +74,9 @@ function init() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    // iOS plays Web Audio as "ambient", which the silent switch mutes even with SOUND: ON; a video
+    // plays through it, and so should a game the player unmuted
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
     ctx = new AC({ latencyHint: 'interactive' });
     master = gainNode(muted ? 0 : MASTER);
     comp = ctx.createDynamicsCompressor();

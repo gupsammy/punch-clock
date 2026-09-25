@@ -39,8 +39,9 @@ const THEMES = {
     // hot orange gym light, hard shadows, sweaty air
     light: { key: '#ffb070', keyInt: 1.25, fill: '#ff9a50', fillInt: 0.5, hemi: 0.7, fog: 0.032, haze: 2, exposure: 1.05 } },
   cons:  { a: '#3dff7a', b: '#f4f4f4', bg: '#03100a', signs: ['BILLABLE HOURS', 'LEVERAGE', 'THINK OUTSIDE THE BOX'], floorLabel: '27', floorName: 'STRATEGY', logo: 'PUNCH CLOCK', prop: 'whiteboard',
-    // clinical projector white
-    light: { key: '#f4f9ff', keyInt: 1.1, fill: '#d0e4ff', fillInt: 1.4, hemi: 0.8, fog: 0.018, haze: 0.5, exposure: 1.05 } },
+    // clinical projector white; neon-green gloves under it sit far over the bloom threshold, so the
+    // glow is scaled down or it hazes the whole ring green
+    light: { key: '#f4f9ff', keyInt: 1.1, fill: '#d0e4ff', fillInt: 1.4, hemi: 0.8, fog: 0.018, haze: 0.5, exposure: 1.05, bloom: 0.4 } },
   board: { a: '#ff3355', b: '#ffcf4a', bg: '#12040a', signs: ['FOUNDED 1931', 'LEGACY', 'RESPECT YOUR ELDERS'], floorLabel: '44', floorName: 'THE BOARDROOM', logo: 'PUNCH CLOCK', prop: 'clock',
     // dim amber tungsten, deep shadows
     light: { key: '#ffb45a', keyInt: 0.8, fill: '#ff9e6a', fillInt: 0.35, hemi: 0.5, fog: 0.03, haze: 1.1, exposure: 0.95 } },

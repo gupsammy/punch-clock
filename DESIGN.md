@@ -95,12 +95,17 @@ download otherwise). mp4 where the browser records it, webm otherwise. Longest s
   Copy that names keys (PRESS ANY KEY, (R)) swaps to touch wording.
 - Portrait works: FOV widens to keep the boss framed. Under 560 px the HUD stacks name over title,
   the invoice moves to the bottom right. In portrait the elevator dossier sits on top and the camera
-  tilts until the boss clears it.
+  tilts until the boss clears it. Under 760 px the memo folds into a 📎 tag below FIGHT that opens it
+  over a dim cover; shown inline it pushed the boss off the bottom of the screen.
 - Screens that can outgrow the viewport scroll; on narrow or short screens their action row sticks
   to the bottom, so NEXT / START is never below the fold.
 - Haptics on Android: perfect dodge, taking a hit, knockdown, KO.
 - If a fight runs under 45 fps for 2 s, quality drops one step: MSAA 4x → 2x, then the pixel ratio a
   quarter step at a time down to 1, then MSAA off with FXAA in its place.
+- Touch devices start with FXAA, not MSAA. On a Samsung Xclipse 940 (ANGLE on Vulkan) the
+  multisampled half-float scene target resolves with bad pixels, and bloom spreads them until every
+  frame is black. MSAA off, bloom off or an 8-bit target each fixed it; FXAA is the one that keeps
+  the look.
 
 ### Frame cost
 - Only the scene target is multisampled. Bloom runs at half size and is not blended back; one grade

@@ -45,7 +45,10 @@ const player = new Player(camera);
 scene.add(player.rig);
 const fx = new FX(scene);
 fx.cam = camera;
-const post = createPost(renderer, scene, camera, isCoarse ? 2 : 4);
+// Phones start on FXAA: some mobile GPUs (Samsung Xclipse) resolve a multisampled half-float target
+// into a few garbage pixels, and bloom smears them over the whole frame, which comes out black
+const post = createPost(renderer, scene, camera, isCoarse ? 0 : 4);
+const BLOOM = post.bloom.strength;
 const input = createInput($('#touchpad'));
 
 // Fill rate, not geometry, is the cost here (4x MSAA half-float target, then bloom and grade), so a big
@@ -122,6 +125,7 @@ function applyTheme(data) {
   const t = data.theme;
   arena.setTheme(t);
   renderer.toneMappingExposure = EXPOSURE * (t.light?.exposure ?? 1);
+  post.bloom.strength = BLOOM * (t.light?.bloom ?? 1);
   setRim(t.a, t.b);
   document.documentElement.style.setProperty('--a', t.a);
   document.documentElement.style.setProperty('--b', t.b);
@@ -234,6 +238,7 @@ function buildFloorButtons() {
 
 function selectFloor(i) {
   current = i;
+  elevEl.classList.remove('memo-open');
   const d = ROSTER[i];
   for (const b of document.querySelectorAll('.fbtn')) b.classList.toggle('sel', +b.dataset.i === i);
   $('#elevFloor').textContent = d.floor;
@@ -658,6 +663,13 @@ function setPause(on) {
 document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight' && !paused) setPause(true); });
 
 // ---------- buttons ----------
+// the phone memo closes on the next tap anywhere, and that tap does nothing else (no stray FIGHT)
+const elevEl = $('#elevator');
+document.addEventListener('click', (e) => {
+  if (!elevEl.classList.contains('memo-open')) return;
+  elevEl.classList.remove('memo-open');
+  e.stopImmediatePropagation();
+}, true);
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
@@ -672,6 +684,7 @@ document.addEventListener('click', (e) => {
     case 'copyShift': copyShift(b); break;
     case 'quit': if (run) toTitle(); else toElevator(); break;
     case 'howto': overlay('howto', true); break;
+    case 'memo': elevEl.classList.add('memo-open'); break;
     case 'closeHowto': overlay('howto', false); break;
     case 'mute': { const m = audio.toggleMute(); $('#muteBtn').textContent = `SOUND: ${m ? 'OFF' : 'ON'}`; break; }
     case 'fight': startIntro(current); break;

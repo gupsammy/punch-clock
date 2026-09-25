@@ -65,7 +65,7 @@ button { font: inherit; color: inherit; }
 .card-holes i:nth-child(3n) { background: var(--a); box-shadow: 0 0 12px var(--a); }
 .logo { margin: 0; font-family: var(--display); font-weight: 400; line-height: .84; font-size: clamp(76px, 15vw, 210px);
   transform: skewY(-6deg) rotate(-2deg); letter-spacing: -0.01em; display: flex; flex-direction: column; }
-.logo span:first-child { color: #fff; text-shadow: 6px 6px 0 var(--b), 12px 12px 0 rgba(255,46,136,.35); }
+.logo span:first-child { color: #fff; text-shadow: 3px 3px 0 var(--ink), 6px 6px 0 var(--b), 12px 12px 0 rgba(255,46,136,.35); }
 .logo span:last-child { color: var(--a); -webkit-text-stroke: 0; text-shadow: 6px 6px 0 var(--ink), 10px 10px 0 var(--b); margin-left: .4em; }
 .logo span { animation: logoIn .7s cubic-bezier(.2,1.6,.4,1) both; }
 .logo span:last-child { animation-delay: .12s; }
@@ -98,7 +98,7 @@ button { font: inherit; color: inherit; }
 .dossier { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .d-floor { font-family: var(--display); letter-spacing: .25em; color: var(--a); font-size: 15px; }
 .dossier h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(44px, 6.5vw, 86px); line-height: .9; transform: skewX(-8deg); transform-origin: left;
-  text-shadow: 5px 5px 0 var(--b); }
+  text-shadow: 2px 2px 0 var(--ink), 5px 5px 0 var(--b); }
 .d-title { font-family: var(--display); font-size: 22px; color: var(--y); letter-spacing: .08em; }
 .d-tag { margin: 4px 0 6px; font-family: var(--hand); font-size: 26px; color: #fff; opacity: .92; }
 .dossier dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 16px; margin: 0; font-size: 12px; max-width: 420px; }
@@ -111,6 +111,9 @@ button { font: inherit; color: inherit; }
 .memo-head { display: flex; justify-content: space-between; border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 6px; font-size: 10px; gap: 10px; }
 .memo p { margin: 0; }
 .d-actions { display: flex; gap: 16px; align-items: center; }
+/* phones fold the memo into this tag, so the boss has room to stand below the dossier */
+.memo-tag { display: none; align-self: flex-start; margin-top: 14px; border: 0; cursor: pointer; background: var(--paper); color: #222;
+  font: 800 11px var(--mono); letter-spacing: .14em; padding: 8px 12px; transform: rotate(-2deg); box-shadow: 3px 3px 0 rgba(0,0,0,.45); }
 
 /* ---------- intro card ---------- */
 #intro { background: rgba(7,5,10,.35); overflow: hidden; flex-direction: column; align-items: flex-start; justify-content: center; padding-left: 8vw; }
@@ -173,7 +176,7 @@ button { font: inherit; color: inherit; }
 .meter.full .lbl em { opacity: 1; animation: blink .5s steps(2) infinite; }
 @keyframes pulse { to { filter: brightness(1.5); } }
 #combo { position: absolute; left: 22px; top: max(42%, calc(124px + min(34vh, 380px) + var(--safe-t))); font-family: var(--display); font-size: 58px; line-height: .9; transform: skewX(-10deg); color: var(--y);
-  text-shadow: 4px 4px 0 var(--b); opacity: 0; transition: opacity .2s; }
+  text-shadow: 2px 2px 0 var(--ink), 4px 4px 0 var(--b); opacity: 0; transition: opacity .2s; }
 #combo small { display: block; font-size: 16px; letter-spacing: .2em; color: #fff; text-shadow: 2px 2px 0 #000; }
 #combo.on { opacity: 1; }
 #combo.bump { animation: bump .15s; }
@@ -214,7 +217,7 @@ button { font: inherit; color: inherit; }
 @keyframes bannerIn { 0% { transform: rotate(-3deg) translateX(-110%); } 18%, 78% { transform: rotate(-3deg) translateX(0); } 100% { transform: rotate(-3deg) translateX(110%); } }
 
 #count { position: fixed; z-index: 7; right: 12%; top: 50%; transform: translateY(-50%); font-family: var(--display); font-size: clamp(120px, 22vw, 300px); line-height: 1;
-  color: #fff; text-shadow: 8px 8px 0 var(--b); pointer-events: none; }
+  color: #fff; text-shadow: 4px 4px 0 var(--ink), 8px 8px 0 var(--b); pointer-events: none; }
 #count.tick { animation: tick .3s cubic-bezier(.2,1.8,.4,1); }
 @keyframes tick { from { transform: translateY(-50%) scale(1.8); opacity: 0; } }
 #mash { position: fixed; z-index: 9; left: 50%; bottom: 20%; transform: translateX(-50%); text-align: center; pointer-events: none; width: min(80vw, 460px); }
@@ -316,7 +319,7 @@ body.in-run .run-hide { display: none; }
 #ending { background: radial-gradient(circle at 50% 40%, rgba(255,194,51,.25), rgba(7,5,10,.95) 70%); }
 .end-wrap { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 760px; }
 .end-small { font-family: var(--display); letter-spacing: .4em; color: var(--y); }
-.end-big { font-family: var(--display); font-size: clamp(64px, 11vw, 150px); line-height: .86; transform: skewX(-8deg); text-shadow: 6px 6px 0 var(--b); animation: slam .6s cubic-bezier(.2,1.8,.4,1) both; }
+.end-big { font-family: var(--display); font-size: clamp(64px, 11vw, 150px); line-height: .86; transform: skewX(-8deg); text-shadow: 3px 3px 0 var(--ink), 6px 6px 0 var(--b); animation: slam .6s cubic-bezier(.2,1.8,.4,1) both; }
 .end-wrap p { color: #ddd; line-height: 1.6; }
 .end-total { font-family: var(--mono); font-weight: 800; font-size: 22px; color: var(--y); }
 #ending .fine { position: static; }
@@ -347,7 +350,7 @@ body:not(.touch) .keys :is(th, td):nth-child(3) { display: none; }
 .keys td { padding: 5px 14px; border-top: 1px solid rgba(255,255,255,.1); }
 .keys td:first-child { color: rgba(255,255,255,.6); }
 #pause { background: rgba(7,5,10,.78); backdrop-filter: blur(4px); }
-.pause-t { font-family: var(--display); font-size: 64px; transform: skewX(-10deg); text-shadow: 5px 5px 0 var(--b); margin-bottom: 10px; }
+.pause-t { font-family: var(--display); font-size: 64px; transform: skewX(-10deg); text-shadow: 2px 2px 0 var(--ink), 5px 5px 0 var(--b); margin-bottom: 10px; }
 
 #rotate { display: none; }
 
@@ -386,13 +389,20 @@ body.touch .tap { display: inline; }
   .perk em { font-size: 10px; }
   .shift-paper { padding: 16px 16px 14px; }
   .s-mod b { font-size: 28px; }
-  .r-head b { font-size: 28px; }
-  #rRows td { padding: 3px 0; font-size: 12px; }
-  #rRows tr.total td { font-size: 16px; padding-top: 6px; }
-  .r-note em { font-size: 21px; }
-  .r-promo { margin-right: 84px; padding: 8px 10px; }
-  .r-promo b { font-size: 19px; }
-  .r-promo em { font-size: 17px; }
+  /* the whole review fits above the sticky action bar on a phone: tighter paper, stamp tucked in
+     beside the promotion instead of hanging off the paper's corner (and off the screen) */
+  .review { gap: 12px; }
+  .paper { padding: 14px 16px 12px; }
+  .r-head b { font-size: 26px; }
+  .r-meta { font-size: 10px; margin: 6px 0 4px; }
+  #rRows td { padding: 2px 0; font-size: 11.5px; }
+  #rRows tr.total td { font-size: 16px; padding-top: 5px; }
+  #results .r-note { margin-top: 8px; min-height: 36px; padding-right: 0; }
+  .r-note em { font-size: 20px; }
+  .r-promo { margin: 10px 112px 0 0; padding: 6px 10px; }
+  .r-promo b { font-size: 18px; }
+  .r-promo em { font-size: 16px; }
+  .stamp { right: 8px; bottom: 8px; }
   .review > .r-actions .btn.big { font-size: 22px; padding: 12px 20px; }
   .review > .r-actions .btn { font-size: 15px; padding: 10px 14px; }
   .shift-wrap > .r-actions .btn.big { font-size: 22px; padding: 12px 20px; }
@@ -411,7 +421,11 @@ body.touch .tap { display: inline; }
   .panel-foot { display: none; }
   #elevator { align-items: flex-start; background: linear-gradient(rgba(7,5,10,.9) 0 45%, rgba(7,5,10,.35) 80%, rgba(7,5,10,.1)); }
   .d-actions { order: 1; margin-top: 6px; }
-  #elevator .memo { display: block; order: 2; margin-top: 18px; }
+  .memo-tag { display: block; order: 1; }
+  /* the open memo sits over a dim cover; the next tap anywhere closes it (main.js) */
+  #elevator.memo-open::before { content: ''; position: fixed; inset: 0; z-index: 2; background: rgba(7,5,10,.65); }
+  #elevator.memo-open .memo { display: block; position: fixed; left: 16px; right: 16px; top: 50%; z-index: 3; margin: 0 auto;
+    transform: translateY(-50%) rotate(-1deg); animation: slam .3s cubic-bezier(.2, 1.6, .4, 1); }
   .d-tag { font-size: 22px; }
   .rules { grid-template-columns: 1fr 1fr; }
   .bar-block { width: 36vw; top: calc(10px + var(--safe-t)); }
