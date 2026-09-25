@@ -20,7 +20,7 @@ export const fmtTime = (t) => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
 };
 
-let last = { php: 1, ohp: 1, combo: 0, pkd: -1, okd: -1, meterFull: false };
+let last = { php: 1, ohp: 1, combo: 0, pkd: -1, okd: -1, meterFull: false, time: '', score: -1, meter: -1 };
 let bubbleT = 0;
 let projector = null;
 
@@ -35,7 +35,7 @@ export const ui = {
     els.invoice.classList.toggle('hidden', !data.bills);
     els.invAmt.textContent = '$0';
     els.meterKey.textContent = touch ? 'SWIPE ↑' : 'SPACE';
-    last = { php: 1, ohp: 1, combo: 0, pkd: -1, okd: -1, meterFull: false };
+    last = { php: 1, ohp: 1, combo: 0, pkd: -1, okd: -1, meterFull: false, time: '', score: -1, meter: -1 };
     els.pTrail.style.transform = els.pFill.style.transform = 'scaleX(1)';
     els.oTrail.style.transform = els.oFill.style.transform = 'scaleX(1)';
     this.clearTransient();
@@ -55,9 +55,11 @@ export const ui = {
       els.oTrail.style.transform = `scaleX(${Math.max(0, h.ohp)})`;
       if (h.ohp < last.ohp) { els.oHp.classList.remove('shake'); void els.oHp.offsetWidth; els.oHp.classList.add('shake'); }
     }
-    els.time.textContent = fmtTime(h.time);
-    els.score.textContent = h.score.toLocaleString('en-US');
-    els.meterFill.style.transform = `scaleX(${h.meter})`;
+    // only touch the DOM on change: each write re-runs style and layout for the frame
+    const time = fmtTime(h.time);
+    if (time !== last.time) els.time.textContent = time;
+    if (h.score !== last.score) els.score.textContent = h.score.toLocaleString('en-US');
+    if (h.meter !== last.meter) els.meterFill.style.transform = `scaleX(${h.meter})`;
     const full = h.meter >= 1;
     if (full !== last.meterFull) els.meter.classList.toggle('full', full);
     if (h.combo !== last.combo) {
@@ -69,7 +71,7 @@ export const ui = {
     }
     if (h.pkd !== last.pkd) els.pkd.innerHTML = Array.from({ length: 3 }, (_, i) => `<i class="${i < h.pkd ? 'on' : ''}"></i>`).join('');
     if (h.okd !== last.okd) els.okd.innerHTML = Array.from({ length: h.maxOkd }, (_, i) => `<i class="${i < h.okd ? 'on' : ''}"></i>`).join('');
-    last = { php: h.php, ohp: h.ohp, combo: h.combo, pkd: h.pkd, okd: h.okd, meterFull: full };
+    last = { php: h.php, ohp: h.ohp, combo: h.combo, pkd: h.pkd, okd: h.okd, meterFull: full, time, score: h.score, meter: h.meter };
   },
 
   callout(text, { size = 'l', color = '#ff2e88', dur = 0.8 } = {}) {
@@ -172,8 +174,8 @@ export const ui = {
       else if (projector) {
         const p = projector();
         if (p) {
-          els.bubble.style.left = `${Math.min(window.innerWidth - 220, Math.max(10, p.x + 40))}px`;
-          els.bubble.style.top = `${Math.max(90, p.y - 40)}px`;
+          // `translate` moves the bubble on the compositor; left/top would lay out the page again
+          els.bubble.style.translate = `${Math.min(window.innerWidth - 220, Math.max(10, p.x + 40))}px ${Math.max(90, p.y - 40)}px`;
         }
       }
     }

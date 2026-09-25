@@ -201,7 +201,7 @@ button { font: inherit; color: inherit; }
   animation: pop 0.9s ease-out forwards; white-space: nowrap; }
 @keyframes pop { 0% { transform: translateY(10px) scale(.6); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
 
-#bubble { position: fixed; z-index: 7; pointer-events: none; transform: translate(-10%, -100%); max-width: min(46vw, 340px); }
+#bubble { position: fixed; left: 0; top: 0; z-index: 7; pointer-events: none; transform: translate(-10%, -100%); max-width: min(46vw, 340px); }
 #bubble span { display: block; background: #fff; color: #111; font-family: var(--display); font-size: clamp(15px, 1.8vw, 21px); letter-spacing: .02em; line-height: 1.15;
   padding: 10px 14px; border: 3px solid #111; border-radius: 16px 16px 16px 4px; box-shadow: 5px 5px 0 var(--b); animation: bubbleIn .25s cubic-bezier(.2,1.8,.4,1); }
 #bubble::after { content: ''; position: absolute; left: 14px; bottom: -14px; border: 9px solid transparent; border-top: 12px solid #111; border-left: 4px solid #111; }

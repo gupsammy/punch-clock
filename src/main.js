@@ -21,8 +21,9 @@ const $ = (s) => document.querySelector(s);
 const canvas = $('#stage');
 let renderer;
 try {
-  // antialiasing happens in the post-processing target; the canvas only receives the final pass
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  // antialiasing happens in the post-processing target; the canvas only receives the final full-screen
+  // pass, so it needs no multisampling and no depth buffer of its own
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, depth: false, powerPreference: 'high-performance' });
 } catch (e) {
   $('#fallback').classList.remove('hidden');
   throw e;

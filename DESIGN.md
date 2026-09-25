@@ -102,6 +102,14 @@ download otherwise). mp4 where the browser records it, webm otherwise. Longest s
 - If a fight runs under 45 fps for 2 s, quality drops one step: MSAA 4x → 2x, then the pixel ratio a
   quarter step at a time down to 1, then MSAA off with FXAA in its place.
 
+### Frame cost
+- Only the scene target is multisampled. Bloom runs at half size and is not blended back; one grade
+  pass adds it, runs the screen effects, tone maps and writes sRGB straight to the canvas. The canvas
+  has no depth buffer and no MSAA of its own. This cut a 1080p@2x frame on an M3 Pro from 12 ms of GPU
+  time to 5.
+- The HUD and chat write to the DOM only when a value changes, and the speech bubble moves with
+  `translate`, so a frame does not force a page layout for text that looks the same.
+
 ## Look
 Dark arena, neon ring ropes, volumetric spotlights, crowd of office-worker silhouettes with phone flashes,
 motivational neon signs. Each floor has its own two-colour palette. Post: bloom, chromatic aberration pulse,
@@ -164,7 +172,7 @@ src/fighter.js        opponent rig, IK arms, spring poses, sway springs, face ca
 src/materials.js      toon materials, outline hulls, lathe torsos, tapered limbs
 src/player.js         first-person gloves and camera motion
 src/arena.js          ring, ropes, lights, crowd, signs, themes
-src/post.js           composer + final grade shader
+src/post.js           scene target, bloom, one grade pass to the canvas
 src/fx.js             particles, projectiles
 src/audio.js          procedural music + sfx (Web Audio)
 src/input.js          keyboard, mouse, touch, gamepad

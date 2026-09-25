@@ -121,7 +121,7 @@ export function createFeed() {
       }
       // the viewer count drifts up while people keep tuning in
       viewers += viewers * 0.0015 * dt * Math.random();
-      if (Math.abs(viewers - shown) >= 1) { shown += (viewers - shown) * Math.min(1, dt * 3); eye.textContent = fmt(shown); }
+      if (Math.abs(viewers - shown) >= 1) { shown += (viewers - shown) * Math.min(1, dt * 3); const v = fmt(shown); if (eye.textContent !== v) eye.textContent = v; }
       idleT -= dt;
       if (idleT < 0) {
         idleT = d.feed.every * 0.55 * (0.7 + Math.random() * 0.6);
