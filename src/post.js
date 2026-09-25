@@ -7,6 +7,13 @@ import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 // ONE full-screen "grade" pass that adds the bloom, runs every screen effect, tone maps and writes
 // sRGB straight to the canvas. A composer chain spent three extra full-resolution passes here, two of
 // them into 4x-MSAA targets, on work this single pass does in registers.
+
+// A NaN or Inf pixel in the half-float scene (a shading glitch on some mobile GPUs) is poison: every
+// blur tap that touches it turns NaN, the bloom mips carry it across the screen and the whole frame
+// comes out black. Such a pixel is zeroed where the bloom and the grade read the scene, so a bad
+// pixel stays one dark pixel. NaN fails every comparison, which survives compilers that fold isnan().
+const FINITE = `vec3 finite(vec3 c){ return all(lessThan(abs(c), vec3(6.0e4))) ? c : vec3(0.0); }`;
+
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -34,6 +41,7 @@ uniform sampler2D tDiffuse, tBloom; uniform float time, ca, hurt, flash, invert,
 #include <colorspace_pars_fragment>
 varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+${FINITE}
 void main(){
   vec2 uv = vUv;
   vec2 d = uv - 0.5;
@@ -47,6 +55,7 @@ void main(){
   c.b = texture2D(tDiffuse, uv - off).b;
   // bloom is soft enough that splitting it per channel changes nothing visible; one tap
   c += texture2D(tBloom, uv).rgb;
+  c = finite(c);
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(vec3(l), c, sat * (1.0 - lowHp * 0.55));
   // vignette, tinted red when hurt or low on health
@@ -71,6 +80,14 @@ void main(){
 // UnrealBloomPass minus its last step: it would blend the bloom back into the (multisampled) scene
 // target at full resolution. The grade pass reads the bloom texture instead.
 class Bloom extends UnrealBloomPass {
+  constructor(...args) {
+    super(...args);
+    const m = this.materialHighPassFilter;
+    m.fragmentShader = m.fragmentShader
+      .replace('void main() {', FINITE + '\nvoid main() {')
+      .replace('vec4 texel = texture2D( tDiffuse, vUv );', 'vec4 texel = texture2D( tDiffuse, vUv ); texel.rgb = finite( texel.rgb );');
+    if (!m.fragmentShader.includes('finite( texel')) console.warn('[post] bloom NaN guard not applied');
+  }
   get texture() { return this.renderTargetsHorizontal[0].texture; }
   render(renderer, src) {
     renderer.getClearColor(this._oldClearColor);
