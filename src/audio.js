@@ -255,16 +255,15 @@ function vox(t, o) {
     mix.connect(bp); bp.connect(bg); nodes.push(bp, bg);
   }
   envelope(out.gain, t, o.a ?? 0.03, o.gain ?? 0.3, o.hold ?? 0, dur);
-  out.connect(o.dest || sfxBus);
-  sendTo(out, o.send, nodes);
+  let tail = out;
+  if (o.pan) {
+    tail = ctx.createStereoPanner();
+    tail.pan.value = clamp(o.pan, -1, 1);
+    out.connect(tail); nodes.push(tail);
+  }
+  tail.connect(o.dest || sfxBus);
+  sendTo(tail, o.send, nodes);
   done(srcs[0], nodes);
-}
-
-function randCurve(n, lo, hi, smooth = 0.5) {
-  const c = new Float32Array(n);
-  let v = (lo + hi) / 2;
-  for (let i = 0; i < n; i++) { v += (rnd(lo, hi) - v) * smooth; c[i] = v; }
-  return c;
 }
 
 function driveCurve(k) {
@@ -904,20 +903,29 @@ function knockdown() {
   for (let i = 0; i < 7; i++) noise(t + 0.03 + Math.random() * 0.3, { dur: rnd(0.03, 0.07), gain: 0.12 * (1 - i / 8), filter: { type: 'bandpass', f: rnd(2000, 4000), Q: 3 } });
 }
 
+// Crowd shouts: [duration range, pitch end ratio, vowel formants]. hey = short "eh", yeah = "eh" opening
+// to "ah" as it falls, woo = rounded "oo" that rises.
+const SHOUTS = [
+  [[0.22, 0.35], 0.85, [[550, 6, 1.4], [1800, 9, 0.5], [2600, 10, 0.15]]],
+  [[0.35, 0.6], 0.75, [[450, 6, 1.4, 750], [1900, 9, 0.5, 1200], [2600, 10, 0.15]]],
+  [[0.4, 0.75], 1.35, [[320, 6, 1.6], [800, 8, 0.5], [2400, 10, 0.08]]],
+];
+
+// Long filtered noise alone reads as static, so the cheer is built from pitched voices: a low and a
+// high "ahh" roar that swells over the whole cheer, scattered shouts, and a quiet dark murmur for body.
 function cheerAt(t, s, dur) {
-  const src = ctx.createBufferSource(), am = ctx.createGain(), env = ctx.createGain(), nodes = [src, am, env];
-  src.buffer = noiseBuf; src.loop = true;
-  for (const [f, q, g] of [[400, 0.9, 1], [1200, 1.1, 0.8], [2500, 1.4, 0.45]]) {
-    const bp = biquad({ type: 'bandpass', f, Q: q }, t, dur), bg = gainNode(g, am);
-    src.connect(bp); bp.connect(bg); nodes.push(bp, bg);
+  for (const f0 of [rnd(140, 170), rnd(260, 310)]) {
+    vox(t, { f0, f1: f0 * 0.85, dur, a: dur * 0.25, hold: dur * 0.2, voices: 6, spread: 0.12, gain: 0.065 + 0.08 * s, send: 0.2,
+      formants: [[700, 5, 1.4], [1150, 6, 0.6], [2500, 8, 0.08]] });
   }
-  am.gain.setValueCurveAtTime(randCurve(64, 0.45, 1.1), t, dur);   // many voices, uneven
-  envelope(env.gain, t, 0.3, 0.6 + 0.8 * s, dur * 0.35, dur);
-  am.connect(env); env.connect(sfxBus);
-  sendTo(env, 0.25, nodes);
-  src.start(t, Math.random() * 2);
-  src.stop(t + dur + 0.05);
-  done(src, nodes);
+  const shouts = Math.round((3 + 7 * s) * Math.min(dur, 3) / 2);
+  for (let i = 0; i < shouts; i++) {
+    const [[d0, d1], end, formants] = SHOUTS[Math.floor(Math.random() * SHOUTS.length)];
+    const f0 = Math.random() < 0.5 ? rnd(170, 260) : rnd(280, 420);
+    vox(t + rnd(0, dur * 0.6), { f0, f1: f0 * end, dur: rnd(d0, d1), a: 0.04, voices: 2, spread: 0.03,
+      gain: rnd(0.04, 0.08) * (0.6 + 0.6 * s), pan: rnd(-0.8, 0.8), send: 0.15, formants });
+  }
+  noise(t, { dur, a: dur * 0.2, hold: dur * 0.2, gain: 0.1 + 0.12 * s, filter: [{ type: 'lowpass', f: 900 }, { type: 'highpass', f: 150 }] });
   if (s > 0.5) {
     for (let i = 0; i < 1 + Math.round(s * 2); i++) {
       const f = rnd(1700, 2300);
