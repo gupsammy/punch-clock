@@ -24,12 +24,22 @@ let intensity = 0.5;   // 0..1, read by the fight track at schedule time
 let timeScale = 1;
 let DT = 0;            // cents added to music voices (slow-mo pitch sag)
 let tempoMul = 1;      // slow-mo tempo drag
+let lpTarget = 20000;  // last musicLP frequency target sent
 let pending = null;    // playMusic() request made before init()
 let current = null;    // the track new requests replace
 let crowd = null;      // murmur bed nodes
 const tracks = [];     // live tracks, including ones fading out
 
 const LOOKAHEAD = 0.12, TICK_MS = 25, MASTER = 0.9;
+
+// ?debug=audio: src/audiodebug.js shows debugSnapshot() live, for chasing on-device dropouts.
+export const AUDIO_DEBUG = new URLSearchParams(location.search).get('debug') === 'audio';
+const dbg = { log: [], voices: 0, lastTick: 0, an: null, buf: null };
+function note(msg) {
+  if (!AUDIO_DEBUG) return;
+  dbg.log.push(`${(performance.now() / 1000).toFixed(1)}s ${msg}`);
+  if (dbg.log.length > 8) dbg.log.shift();
+}
 const _ = null;
 
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -83,6 +93,8 @@ function init() {
     comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3.5;
     comp.attack.value = 0.003; comp.release.value = 0.22;
     master.connect(comp); comp.connect(ctx.destination);
+    ctx.onstatechange = () => note(`context ${ctx.state}`);
+    if (AUDIO_DEBUG) { dbg.an = ctx.createAnalyser(); dbg.an.fftSize = 1024; dbg.buf = new Float32Array(1024); comp.connect(dbg.an); }
 
     sfxBus = gainNode(0.9, master);
     musicBus = gainNode(0.35, master);
@@ -132,6 +144,10 @@ function setTimeScale(s) {
   if (!ctx) return;
   // 20 kHz at 1, 600 Hz at 0.25, ~300 Hz at 0.1
   const f = timeScale > 0.999 ? 20000 : 20000 * Math.pow(600 / 20000, (1 - timeScale) / 0.75);
+  // Called every frame: queue an automation event only when the target moves (>2%, or the final
+  // snap to 20 kHz), so the param's event list doesn't grow at 60 per second.
+  if (f === lpTarget || (f !== 20000 && Math.abs(f - lpTarget) < lpTarget * 0.02)) return;
+  lpTarget = f;
   musicLP.frequency.setTargetAtTime(f, now(), 0.08);
 }
 
@@ -146,7 +162,8 @@ function duck(amount = 0.5, time = 0.4) {
 // ───────────────────────────── voices ─────────────────────────────
 
 function done(src, nodes) {
-  src.onended = () => nodes.forEach(disc);
+  dbg.voices++;
+  src.onended = () => { nodes.forEach(disc); dbg.voices--; };
 }
 
 function sendTo(node, amt, nodes) {
@@ -695,11 +712,13 @@ function stopMusic(fade = 0.6) {
 
 function tick() {
   if (!ctx) return;
-  const t0 = ctx.currentTime;
+  const t0 = ctx.currentTime, wall = performance.now();
+  if (dbg.lastTick && wall - dbg.lastTick > 150) note(`timer stalled ${Math.round(wall - dbg.lastTick)} ms`);
+  dbg.lastTick = wall;
   for (let i = tracks.length - 1; i >= 0; i--) {
     const tr = tracks[i];
     if (tr.stopAt && t0 > tr.stopAt + 3) { tr.nodes.forEach(disc); tracks.splice(i, 1); continue; }
-    if (tr.next < t0 - 0.25) tr.next = t0 + 0.02; // tab was throttled: skip ahead, don't burst
+    if (tr.next < t0 - 0.25) { if (!tr.stopAt) note(`${tr.id} music skipped ahead`); tr.next = t0 + 0.02; } // tab was throttled: skip ahead, don't burst
     while (tr.next < t0 + LOOKAHEAD && !(tr.stopAt && tr.next >= tr.stopAt)) {
       const six = 60 / (tr.bpm * tempoMul) / 4;
       const swing = tr.step & 1 ? tr.swing * six : 0;
@@ -1140,7 +1159,22 @@ function say(text, opts = {}) {
   u.volume = 1;
   const v = pickVoice(opts?.voiceHint);
   if (v) { u.voice = v; u.lang = v.lang; }
+  u.onstart = () => note(`speech start "${text}"`);
+  u.onend = () => note(`speech end (context ${ctx?.state})`);
   ss.speak(u);
+}
+
+// Live engine state for the ?debug=audio overlay. peak is the loudest output sample in the last ~21 ms.
+function debugSnapshot() {
+  let peak = 0;
+  if (dbg.an) { dbg.an.getFloatTimeDomainData(dbg.buf); for (const x of dbg.buf) peak = Math.max(peak, Math.abs(x)); }
+  return {
+    state: ctx.state, rate: ctx.sampleRate, time: ctx.currentTime,
+    latency: ((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000,
+    track: current?.id ?? null, lead: current ? current.next - ctx.currentTime : null,
+    duck: musicDuck.gain.value, lp: musicLP.frequency.value, master: master.gain.value, muted,
+    voices: dbg.voices, peak, log: dbg.log,
+  };
 }
 
 // ───────────────────────────── API ─────────────────────────────
@@ -1202,4 +1236,5 @@ export const audio = {
   snore: guard(snore),
   heartbeat: guard(heartbeat),
   say: guard(say),
+  debugSnapshot: guard(debugSnapshot),
 };
