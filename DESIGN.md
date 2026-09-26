@@ -186,5 +186,7 @@ src/spring.js         spring + math helpers
 src/feed.js           company chat reacting to the fight
 src/shift.js          daily shift: modifiers, perks, run state, report
 src/clip.js           rolling canvas+audio recorder, clip overlay, end card
+src/versus.js         1v1 versus fight (see VERSUS.md)
+src/net.js            1v1 transport: WebRTC via vendored Trystero, or BroadcastChannel for dev
 ```
 Run: `python3 serve.py` in this folder, open http://localhost:8777.

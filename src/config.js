@@ -234,6 +234,52 @@ export const ROSTER = [
   },
 ];
 
+// 1v1 versus (VERSUS.md "Characters"). Moves are in the thrower's own hands; they mirror on arrival.
+// wind scales every telegraphed wind-up (lower = faster); power scales attack and punch damage;
+// punch picks the tap-punch profile; bars are the 1–5 select-card ratings; guard defaults to 100.
+// Special flurries keep each wind-up at 0.3 s or more: lag trims them further on the defender's screen.
+// perk and flaw are the character's rule bend, taken from their ladder gimmick (versus.js "traits").
+export const VS_PUNCH = {
+  fast: { L: { startup: 0.065, recover: 0.13, dmg: 3.0 }, R: { startup: 0.095, recover: 0.17, dmg: 4.8 } },
+  normal: { L: { startup: 0.075, recover: 0.15, dmg: 3.4 }, R: { startup: 0.11, recover: 0.2, dmg: 5.6 } },
+  heavy: { L: { startup: 0.09, recover: 0.17, dmg: 4.0 }, R: { startup: 0.13, recover: 0.23, dmg: 6.6 } },
+};
+export const VS = {
+  kyle: { hp: 90, wind: 0.85, power: 0.85, punch: 'fast', bars: { POWER: 1, SPEED: 5, HEALTH: 2, TRICKS: 3 },
+    perk: ['NOTHING TO LOSE', 'Under 30% HP his punches hit 35% harder and his meter fills 50% faster.'],
+    flaw: ['PHONE CHECK', 'Stand still for 3 s and he checks his phone. Hitting him then is DISRESPECT.'],
+    holdL: { id: 'jabL' }, holdR: { id: 'throwR', prop: 'coffee' },
+    special: { name: 'NETWORKING', seq: ['jabL', 'jabR', 'jabL', 'throwR'], windup: 0.34, prop: 'coffee' } },
+  brenda: { hp: 100, wind: 0.95, power: 1, punch: 'normal', bars: { POWER: 3, SPEED: 3, HEALTH: 3, TRICKS: 3 },
+    perk: ['PAPER TRAIL', 'Block four punches in a row and she answers with an automatic fast counter.'],
+    flaw: ['SIP BREAK', 'After her special lands she stops for a sip of coffee. Wide open.'],
+    holdL: { id: 'hookL' }, holdR: { id: 'throwR', prop: 'paper' },
+    special: { name: 'PERFORMANCE REVIEW', seq: ['jabL', 'jabR', 'hookL'], windup: 0.32 } },
+  chad: { hp: 110, wind: 1, power: 1.15, punch: 'heavy', bars: { POWER: 4, SPEED: 2, HEALTH: 4, TRICKS: 2 },
+    guard: 130,
+    perk: ['GRINDSET', 'Guard of 130: the hardest in the building to break.'],
+    flaw: ['FLEX', 'Every attack that lands, he stops to flex. Punish the pose.'],
+    holdL: { id: 'upperL' }, holdR: { id: 'upperR' },
+    special: { id: 'pivot' } },
+  derek: { hp: 100, wind: 0.9, power: 0.95, punch: 'fast', bars: { POWER: 2, SPEED: 4, HEALTH: 3, TRICKS: 4 },
+    feint: 0.85,
+    perk: ['BILLABLE HOURS', 'Every attack he lands invoices you 20 meter. Can feint almost to the end of a wind-up.'],
+    flaw: ['NO SKIN IN THE GAME', 'Nothing armored: a punch interrupts any wind-up, specials too.'],
+    holdL: { id: 'hookL' }, holdR: { id: 'throwR', prop: 'card' },
+    special: { name: 'RESTRUCTURING', seq: ['hookL', 'hookR', 'hookL', 'hookR', 'upperR'], windup: 0.32 } },
+  margaret: { hp: 95, wind: 1.05, power: 1.2, punch: 'heavy', bars: { POWER: 5, SPEED: 1, HEALTH: 2, TRICKS: 4 },
+    perk: ['WHO DARES', 'Wake her with a punch and she is FURIOUS: full meter, 25% more power for 5 s.'],
+    flaw: ['NAPS', 'Dozes off mid-fight (mash to wake). Hits on a sleeping chairwoman are DISRESPECT.'],
+    holdL: { id: 'hookL' }, holdR: { id: 'smash' },
+    special: { name: 'BACK IN MY DAY', seq: ['jabL', 'jabR', 'hookL', 'hookR', 'smash'], windup: 0.3 } },
+  roland: { hp: 105, wind: 1, power: 1.1, punch: 'heavy', bars: { POWER: 4, SPEED: 2, HEALTH: 4, TRICKS: 5 },
+    guard: 70,
+    perk: ['GOLDEN PARACHUTE', 'His first knockdown doesn\'t count: he\'s straight back up, jacket off, 15% harder.'],
+    flaw: ['SHAREHOLDERS', 'A guard of 70. Pressure breaks it fast.'],
+    holdL: { id: 'takeover' }, holdR: { id: 'throwR', prop: 'cash' },
+    special: { name: 'LAYOFFS', seq: ['hookR', 'jabL', 'hookL', 'upperR'], windup: 0.34, dark: true } },
+};
+
 // Your job title on floor B1. Each win promotes you into the job of whoever you just beat.
 export const START_TITLE = 'TEMP, NIGHT SHIFT';
 

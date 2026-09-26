@@ -6,6 +6,7 @@ const els = {
   pFill: $('.you .hp .fill'), pTrail: $('.you .hp .trail'), pHp: $('.you .hp'),
   oFill: $('.opp .hp .fill'), oTrail: $('.opp .hp .trail'), oHp: $('.opp .hp'),
   pkd: $('#pkd'), okd: $('#okd'),
+  pGuard: $('.you .guard i'), oGuard: $('.opp .guard i'),
   time: $('#hudTime'), score: $('#hudScore'), floor: $('#hudFloor'),
   oppName: $('#oppName'), oppTitle: $('#oppTitle'),
   meter: $('#meter'), meterFill: $('#meter .track i'), meterKey: $('#meterKey'),
@@ -71,7 +72,10 @@ export const ui = {
     }
     if (h.pkd !== last.pkd) els.pkd.innerHTML = Array.from({ length: 3 }, (_, i) => `<i class="${i < h.pkd ? 'on' : ''}"></i>`).join('');
     if (h.okd !== last.okd) els.okd.innerHTML = Array.from({ length: h.maxOkd }, (_, i) => `<i class="${i < h.okd ? 'on' : ''}"></i>`).join('');
-    last = { php: h.php, ohp: h.ohp, combo: h.combo, pkd: h.pkd, okd: h.okd, meterFull: full, time, score: h.score, meter: h.meter };
+    // versus only: guard bars under both HP bars
+    if (h.pguard !== undefined && h.pguard !== last.pguard) { els.pGuard.style.transform = `scaleX(${h.pguard})`; els.pGuard.parentNode.classList.toggle('low', h.pguard < 0.35); }
+    if (h.oguard !== undefined && h.oguard !== last.oguard) { els.oGuard.style.transform = `scaleX(${h.oguard})`; els.oGuard.parentNode.classList.toggle('low', h.oguard < 0.35); }
+    last = { php: h.php, ohp: h.ohp, combo: h.combo, pkd: h.pkd, okd: h.okd, meterFull: full, time, score: h.score, meter: h.meter, pguard: h.pguard, oguard: h.oguard };
   },
 
   callout(text, { size = 'l', color = '#ff2e88', dur = 0.8 } = {}) {

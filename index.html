@@ -59,6 +59,7 @@
   <div class="bar-block you">
     <div class="who"><span class="nm">YOU</span><span class="tt" id="youTitle">TEMP, NIGHT SHIFT</span></div>
     <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    <div class="guard"><i></i></div>
     <div class="pips" id="pkd"></div>
   </div>
   <div class="clock">
@@ -69,6 +70,7 @@
   <div class="bar-block opp">
     <div class="who"><span class="nm" id="oppName">KYLE</span><span class="tt" id="oppTitle">UNPAID INTERN</span></div>
     <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    <div class="guard"><i></i></div>
     <div class="pips" id="okd"></div>
   </div>
   <div id="invoice" class="hidden"><b>INVOICE #0027</b><span id="invAmt">$0</span></div>
@@ -100,6 +102,7 @@
     <div class="menu">
       <button class="btn big" data-act="start">CLOCK IN</button>
       <button class="btn shift" data-act="shift" id="shiftBtn">DAILY SHIFT</button>
+      <button class="btn vsbtn" data-act="vs">1V1 WITH A FRIEND</button>
       <button class="btn" data-act="howto">HOW TO FIGHT</button>
       <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>
     </div>
@@ -180,6 +183,67 @@
       <button class="btn" data-act="copyShift">COPY RESULT</button>
       <button class="btn ghost" data-act="shift">NEW SHIFT</button>
       <button class="btn ghost" data-act="back">TITLE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1V1 LOBBY ============ -->
+<section id="vsLobby" class="screen hidden">
+  <div class="shift-wrap">
+    <div class="paper shift-paper">
+      <div class="r-head">
+        <div><b>1V1 · MEETING INVITE</b><span>ONE ROOM · TWO EMPLOYEES</span></div>
+        <div class="r-logo">PUNCH<br>CLOCK</div>
+      </div>
+      <div class="vl-code" id="vlCode"></div>
+      <p class="vl-status" id="vlStatus"></p>
+      <div class="vl-link" id="vlLink"></div>
+      <ul class="s-rules">
+        <li>Send the link. When your friend opens it, you both pick a fighter.</li>
+        <li>Tap to punch. Hold to throw your fighter's heavy. Swipe up for the special.</li>
+        <li>Hits land on the screen of whoever could have dodged them.</li>
+      </ul>
+    </div>
+    <div class="r-actions">
+      <button class="btn big" data-act="vsCopy" id="vlCopy">COPY INVITE LINK</button>
+      <button class="btn" data-act="vsShare" id="vlShare">SHARE</button>
+      <button class="btn ghost" data-act="vsLeave">BACK</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1V1 SELECT ============ -->
+<section id="vsSelect" class="screen hidden">
+  <div class="sel-top"><b>CHOOSE YOUR EMPLOYEE</b><span id="selThem">OPPONENT IS BROWSING</span></div>
+  <div class="sel-card">
+    <div class="d-floor" id="scFloor"></div>
+    <h2 id="scName"></h2>
+    <div class="d-title" id="scTitle"></div>
+    <div class="sc-bars" id="scBars"></div>
+    <div class="sc-note"><b>PERK</b><span id="scGood"></span></div>
+    <div class="sc-note weak"><b>FLAW</b><span id="scWeak"></span></div>
+    <table class="sc-moves" id="scMoves"></table>
+  </div>
+  <div class="sel-bottom">
+    <div class="sel-grid" id="selGrid"></div>
+    <div class="sel-actions">
+      <button class="btn big" data-act="vsLock" id="selLock">LOCK IN</button>
+      <button class="btn ghost" data-act="vsLeave">LEAVE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1V1 RESULT ============ -->
+<section id="vsEnd" class="screen hidden">
+  <div class="fired-wrap vs-end">
+    <div class="fired-big" id="veBig"></div>
+    <p id="veLine"></p>
+    <table class="ve-rows" id="veRows"></table>
+    <div class="fired-sick" id="veAgain"></div>
+    <div class="menu row">
+      <button class="btn big" data-act="vsAgain" id="veAgainBtn">REMATCH</button>
+      <button class="btn" data-act="vsPick">NEW FIGHTERS</button>
+      <button class="btn ghost" data-act="vsLeave">LEAVE</button>
     </div>
   </div>
 </section>

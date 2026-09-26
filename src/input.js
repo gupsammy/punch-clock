@@ -44,11 +44,18 @@ export function createInput(target) {
   });
 
   // touch: tap left/right half to punch; swipe to dodge/duck; swipe up = haymaker
+  // Hold mode (versus): a touch presses its punch at once and releases on lift, so a long press can
+  // charge a heavy; if it turns into a swipe the press is withdrawn with src 'cancel'.
   const touches = new Map();
   const SWIPE = 34;
+  let holdMode = false;
   target.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    for (const t of e.changedTouches) touches.set(t.identifier, { x: t.clientX, y: t.clientY, t: performance.now(), fired: null });
+    for (const t of e.changedTouches) {
+      const press = holdMode ? (t.clientX < window.innerWidth / 2 ? 'jabL' : 'jabR') : null;
+      touches.set(t.identifier, { x: t.clientX, y: t.clientY, t: performance.now(), fired: null, press });
+      if (press) emit(press, true, 'touch');
+    }
     emit('any', true, 'touch');
   }, { passive: false });
   target.addEventListener('touchmove', (e) => {
@@ -62,6 +69,7 @@ export function createInput(target) {
       if (Math.abs(dx) > Math.abs(dy)) a = dx < 0 ? 'left' : 'right';
       else a = dy > 0 ? 'duck' : 'haymaker';
       s.fired = a;
+      if (s.press) { emit(s.press, false, 'cancel'); s.press = null; }
       emit(a, true, 'touch');
     }
   }, { passive: false });
@@ -72,6 +80,7 @@ export function createInput(target) {
       touches.delete(t.identifier);
       if (!s) continue;
       if (s.fired) { emit(s.fired, false, 'touch'); continue; }
+      if (s.press) { emit(s.press, false, 'touch'); continue; }
       if (performance.now() - s.t < 450) {
         const a = s.x < window.innerWidth / 2 ? 'jabL' : 'jabR';
         emit(a, true, 'touch'); emit(a, false, 'touch');
@@ -106,6 +115,7 @@ export function createInput(target) {
   return {
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     held: (a) => held.has(a),
+    setHoldMode(on) { holdMode = on; },
     poll: pollPad,
     touch: () => matchMedia('(pointer: coarse)').matches,
   };

@@ -8,6 +8,7 @@ import { toonMat, inked, GEO, placeSegment } from './materials.js';
 export const CAM_BASE = new THREE.Vector3(0, 1.62, 1.2);
 export const LOOK_AT = new THREE.Vector3(0, 1.42, -0.6);
 
+const DEFAULT_GLOVE = '#ff2a3d';
 const GUARD = { lx: -0.23, ly: -0.3, lz: -0.6, rx: 0.23, ry: -0.3, rz: -0.6, lr: 0.25, rr: -0.25 };
 
 export class Player {
@@ -27,14 +28,18 @@ export class Player {
     this.baseFov = 58;
     this.charge = 0;
 
-    const gloveMat = this.gloveMat = toonMat('#ff2a3d', { emissive: 0x000000 });
+    // one material per glove, so a versus wind-up can light one hand
+    this.gloveMats = { L: toonMat(DEFAULT_GLOVE, { emissive: 0x000000 }), R: toonMat(DEFAULT_GLOVE, { emissive: 0x000000 }) };
+    this.tellG = { L: 0, R: 0 };
+    this.tellC = { L: new THREE.Color(), R: new THREE.Color() };
     const tape = toonMat('#f2efe8');
     const skin = toonMat('#c98d6a');
     this.gloves = {};
     for (const side of ['L', 'R']) {
       const s = side === 'L' ? -1 : 1;
+      const gloveMat = this.gloveMats[side];
       const grp = new THREE.Group();
-      const main = inked(GEO.sphere, side === 'L' ? gloveMat : gloveMat, 0.006);
+      const main = inked(GEO.sphere, gloveMat, 0.006);
       main.scale.set(0.095, 0.09, 0.118);
       grp.add(main);
       const knuckle = inked(GEO.sphere, gloveMat, 0.005);
@@ -61,6 +66,7 @@ export class Player {
     this.trauma = 0;
     this.lookOverride = null;
     this.charge = 0;
+    this.tellG.L = this.tellG.R = 0;
   }
 
   // Menu/intro framing: the rig glides to a free camera spot and the gloves hide.
@@ -90,6 +96,30 @@ export class Player {
     const k = side === 'L' ? 'l' : 'r';
     if (kind === 'block') { this.g.kick(k + 'z', 5); this.g.kick(k + 'x', side === 'L' ? -2 : 2); this.squash[side] = 0.5; }
     if (kind === 'hit') { this.g.kick(k + 'z', 2); this.g.kick(k + 'y', 1.5); this.squash[side] = 1; }
+  }
+
+  setGloveColor(hex) { for (const k in this.gloveMats) this.gloveMats[k].color.set(hex || DEFAULT_GLOVE); }
+  tell(side, level, color) { this.tellG[side] = level; if (color) this.tellC[side].set(color); }
+
+  // versus: your own telegraphed attack. The wind-up shape matches what your opponent sees you do.
+  windup(side, kind) {
+    const s = side === 'L' ? -1 : 1, k = side === 'L' ? 'l' : 'r';
+    const shape = {
+      jab: { x: s * 0.26, y: -0.27, z: -0.42, r: 0 },
+      hook: { x: s * 0.52, y: -0.2, z: -0.5, r: -s * 0.9 },
+      special: { x: s * 0.52, y: -0.2, z: -0.45, r: -s * 0.9 },
+      upper: { x: s * 0.18, y: -0.52, z: -0.5, r: -s * 0.4 },
+      smash: { x: s * 0.3, y: 0.06, z: -0.34, r: s * 0.5 },
+      throw: { x: s * 0.46, y: -0.08, z: -0.22, r: s * 0.3 },
+    }[kind] || { x: s * 0.26, y: -0.27, z: -0.42, r: 0 };
+    this.g.set({ [k + 'x']: shape.x, [k + 'y']: shape.y, [k + 'z']: shape.z, [k + 'r']: shape.r }, 260, 18);
+    this.cam.set({ z: 0.08, roll: s * 0.05, yaw: -s * 0.04, fov: 3 }, 120, 14);
+  }
+  strike(side, kind) {
+    const s = side === 'L' ? -1 : 1, k = side === 'L' ? 'l' : 'r';
+    const y = kind === 'upper' ? 0.12 : kind === 'smash' ? -0.04 : 0.03;
+    this.g.set({ [k + 'x']: -s * 0.02, [k + 'y']: y, [k + 'z']: -1.3, [k + 'r']: s * 0.2 }, kind === 'hook' || kind === 'special' ? 520 : 700, 30);
+    this.cam.set({ x: 0, y: 0, z: -0.12, roll: -s * 0.08, yaw: s * 0.06, pitch: 0, fov: -4 }, 400, 24);
   }
 
   haymakerWind() {
@@ -189,6 +219,10 @@ export class Player {
       grp.lookAt(this._a.set(s * 0.42, -0.72, 0.05).applyMatrix4(this.camera.matrixWorld));
       grp.rotateZ(G(k + 'r'));
     }
-    this.gloveMat.emissive.setRGB(1, 0.35, 0.1).multiplyScalar(this.charge * (0.8 + 0.2 * Math.sin(t * 30)));
+    const pulse = 0.8 + 0.2 * Math.sin(t * 30);
+    for (const side of ['L', 'R']) {
+      const e = this.gloveMats[side].emissive.setRGB(1, 0.35, 0.1).multiplyScalar(this.charge * pulse);
+      if (this.tellG[side] > 0) e.lerp(this.tellC[side], Math.min(1, this.tellG[side])).multiplyScalar(0.4 + 0.6 * this.tellG[side] * pulse);
+    }
   }
 }

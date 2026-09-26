@@ -1,14 +1,16 @@
 import * as THREE from 'three';
-import { ROSTER, GRADES, REVIEW_NOTES, FIRED_LINES, START_TITLE } from './config.js';
+import { ROSTER, GRADES, REVIEW_NOTES, FIRED_LINES, START_TITLE, VS } from './config.js';
 import { createFeed } from './feed.js';
 import { createClip } from './clip.js';
 import { createArena } from './arena.js';
-import { Fighter } from './fighter.js';
+import { Fighter, drawFace, FACE_W, FACE_H } from './fighter.js';
 import { Player, CAM_BASE, LOOK_AT } from './player.js';
 import { FX } from './fx.js';
 import { createPost } from './post.js';
 import { createInput } from './input.js';
 import { Fight } from './fight.js';
+import { Versus } from './versus.js';
+import { connect, newCode } from './net.js';
 import { ui, makeCard, fmtTime } from './ui.js';
 import { audio, AUDIO_DEBUG } from './audio.js';
 if (AUDIO_DEBUG) import('./audiodebug.js');
@@ -157,7 +159,7 @@ ui.setProjector(() => {
 const wipe = $('#wipe');
 wipe.addEventListener('animationend', () => wipe.classList.remove('go'));
 function show(id) {
-  const from = document.querySelector(':is(#title, #elevator, #shift, #shiftEnd, #intro, #results, #fired, #ending):not(.hidden)');
+  const from = document.querySelector(':is(#title, #elevator, #shift, #shiftEnd, #intro, #results, #fired, #ending, #vsLobby, #vsSelect, #vsEnd):not(.hidden)');
   // wipe between menu screens; into the fight (id null) the intro card clears on its own
   if (id && from && from.id !== id) { wipe.classList.remove('go'); void wipe.offsetWidth; wipe.classList.add('go'); }
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('hidden', s.id !== id);
@@ -270,6 +272,9 @@ function selectFloor(i) {
 
 // ---------- intro + fight ----------
 function startIntro(i) {
+  document.body.classList.remove('vs');
+  player.setGloveColor(null);
+  $('#meter .lbl span').textContent = 'OVERTIME';
   audio.uiSelect();
   audio.punchClock();
   current = i;
@@ -316,6 +321,7 @@ function beginFight() {
   ui.showHud(true);
   player.setMenu(null);
   player.reset();
+  if (vs) { beginVsFight(); return; }
   const d = ROSTER[current];
   audio.playMusic('fight', { bpm: d.music.bpm, root: d.music.root, mood: d.music.mood, intensity: 0.3 });
   feed.start(d, current);
@@ -336,6 +342,7 @@ function retry() {
 }
 
 function endFight(r) {
+  if (vs) { toVsEnd(r); return; }
   clip.stop();
   r.clip = clip.latest;
   lastResult = r;
@@ -574,6 +581,344 @@ async function copyShift(b) {
   setTimeout(() => { b.textContent = 'COPY RESULT'; }, 1400);
 }
 
+// ---------- 1v1 versus (VERSUS.md) ----------
+const VS_VERSION = 1;
+let vs = null;        // the room: { code, creator, net, peer, host, r, me, them, meReady, themReady, again, local, lag }
+let vsMenu = false;   // the pause menu is open over a live versus fight
+const MOVE_NAMES = { jabL: 'Quick jab', hookL: 'Left hook', upperL: 'Left uppercut', upperR: 'Right uppercut', smash: 'THE SMASH',
+  takeover: 'HOSTILE TAKEOVER', pivot: 'THE PIVOT' };
+const moveName = (m) => (m.id === 'throwR' ? `Throws ${m.prop === 'paper' ? 'a write-up' : m.prop === 'card' ? 'business cards' : m.prop}` : MOVE_NAMES[m.id] || m.id);
+
+function vsLink() {
+  const q = new URLSearchParams({ vs: vs.code });
+  if (vs.local) q.set('net', 'local');
+  return `${location.origin}${location.pathname}?${q}`;
+}
+function vsStatus(text, cls = '') { const el = $('#vlStatus'); el.textContent = text; el.className = 'vl-status ' + cls; }
+
+function startVersus(code, creator) {
+  vsClose();
+  clip.stop();
+  run = null; fight = null; paused = false; overlay('pause', false);
+  document.body.classList.remove('in-run');
+  const q = new URLSearchParams(location.search);
+  vs = { code, creator, net: null, peer: false, gotHi: false, host: false, r: Math.random(), me: save.vsPick ?? 0, them: null,
+    meReady: false, themReady: false, again: { me: false, them: false }, local: q.get('net') === 'local', lag: +q.get('lag') || 0 };
+  history.replaceState(null, '', vsLink());
+  toVsLobby();
+  const mine = vs;
+  const live = (fn) => (...a) => { if (vs === mine) fn(...a); };
+  connect({ code, local: vs.local, lag: vs.lag }, {
+    msg: live(onVsMsg), join: live(onVsJoin), leave: live(onVsLeave),
+    error: live(() => vsStatus('Could not connect to your friend. Some office and mobile networks block direct links; try another network.', 'bad')),
+  }).then((n) => {
+    if (vs !== mine) { n.close(); return; }
+    mine.net = n;
+    if (mine.peer) sendHi();
+  }).catch(() => { if (vs === mine) vsStatus('Could not load the connection code. Check your internet and try again.', 'bad'); });
+  // a guest that hears nothing probably sits behind a network that blocks direct links
+  setTimeout(() => {
+    if (vs === mine && !mine.peer && !creator) vsStatus('Still can\'t reach your friend. Check they have the room open, or try another network (some block direct connections).', 'bad');
+  }, 20000);
+}
+
+function vsClose() {
+  if (!vs) return;
+  vs.net?.close();
+  vs = null;
+  vsMenu = false;
+  input.setHoldMode(false);
+}
+
+function vsLeave() {
+  vsClose();
+  history.replaceState(null, '', location.pathname);
+  document.body.classList.remove('vs');
+  toTitle();
+}
+
+function toVsLobby() {
+  screen = 'vsLobby';
+  fight = null; vsMenu = false; overlay('pause', false);
+  input.setHoldMode(false);
+  document.body.classList.remove('vs');
+  ui.showHud(false); ui.clearTransient();
+  time.reset(); fx.clear(); arena.blackout(false);
+  post.fx.dark = 0; post.fx.sat = 1; post.fx.lowHp = 0;
+  const d = ROSTER[vs.me];
+  setFighter(vs.me); applyTheme(d); fighter.reset();
+  fighter.setPose(tauntPoseOf(d), 80, 10); fighter.setExpr('taunt');
+  player.reset();
+  player.setMenu(new THREE.Vector3(1.2, 1.7, 1.6), new THREE.Vector3(0.4, 1.3, -0.6), true);
+  $('#vlCode').textContent = vs.code;
+  $('#vlLink').textContent = vsLink();
+  $('#vlShare').classList.toggle('hidden', !navigator.share);
+  vsStatus(vs.creator ? 'Waiting for your friend to open the link' : `Joining room ${vs.code}`, 'wait');
+  show('vsLobby');
+  audio.playMusic('elevator');
+}
+
+function sendHi() { vs.net.send({ k: 'hi', v: VS_VERSION, r: vs.r }); }
+
+function onVsJoin() {
+  vs.peer = true;
+  vsStatus('Friend found. Shaking hands', 'wait');
+  if (vs.net) sendHi();
+}
+
+function onVsLeave() {
+  vs.peer = false; vs.gotHi = false; vs.themReady = false;
+  if (fight instanceof Versus && (screen === 'fight' || screen === 'intro')) { fight.forfeit(); return; }
+  if (screen === 'vsEnd') { $('#veAgain').textContent = 'YOUR OPPONENT LEFT'; return; }
+  toVsLobby();
+  vsStatus('Your friend left. Waiting for them to come back', 'wait');
+}
+
+function onVsMsg(m) {
+  switch (m.k) {
+    case 'hi':
+      if (m.v !== VS_VERSION) { vsStatus('You and your friend are on different versions. Both reload the page.', 'bad'); return; }
+      vs.host = vs.r > m.r;
+      // greet back once: whichever greeting got lost, both sides end up here
+      if (!vs.gotHi) { vs.gotHi = true; sendHi(); audio.uiSelect(); toVsSelect(); }
+      break;
+    case 'sel':
+      vs.them = m.c; vs.themReady = m.ready;
+      if (screen === 'vsSelect') renderSelect();
+      vsMaybeGo();
+      break;
+    case 'go': startVsIntro(); break;
+    case 'again': vs.again.them = true; renderVsAgain(); vsMaybeGo(); break;
+    case 'pick': if (screen === 'vsEnd') toVsSelect(); break;
+    default: if (fight instanceof Versus) fight.onMsg(m);
+  }
+}
+
+// the host starts every fight, so both sides start from the same message
+function vsMaybeGo() {
+  if (!vs.host) return;
+  const pickDone = screen === 'vsSelect' && vs.meReady && vs.themReady && vs.them !== null;
+  const rematch = screen === 'vsEnd' && vs.again.me && vs.again.them;
+  if (!pickDone && !rematch) return;
+  vs.net.send({ k: 'go' });
+  startVsIntro();
+}
+
+function toVsSelect() {
+  screen = 'vsSelect';
+  fight = null; vsMenu = false; overlay('pause', false);
+  input.setHoldMode(false);
+  document.body.classList.remove('vs');
+  ui.showHud(false); ui.clearTransient();
+  time.reset(); fx.clear(); arena.blackout(false);
+  post.fx.dark = 0; post.fx.sat = 1; post.fx.lowHp = 0;
+  vs.meReady = false;
+  vs.again = { me: false, them: false };
+  buildTiles();
+  show('vsSelect');
+  // POV: you stand where you will fight, gloves up
+  player.reset();
+  player.setMenu(null);
+  setFighter(vs.them ?? vs.me);
+  applyTheme(ROSTER[vs.them ?? vs.me]);
+  fighter.reset();
+  vsBrowse(vs.me, true);
+  audio.playMusic('elevator');
+}
+
+function buildTiles() {
+  const wrap = $('#selGrid');
+  wrap.innerHTML = '';
+  ROSTER.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = 'tile'; b.dataset.act = 'vsTile'; b.dataset.i = i;
+    const c = document.createElement('canvas');
+    c.width = 156; c.height = 140;
+    paintTile(c, d);
+    const name = document.createElement('span');
+    name.textContent = d.name.split(' ')[0];
+    const them = document.createElement('em');
+    them.className = 'them'; them.textContent = 'THEM';
+    b.append(c, name, them);
+    wrap.appendChild(b);
+  });
+}
+
+// a head-and-shoulders mugshot from the fighter's own face painter
+function paintTile(c, d) {
+  const g = c.getContext('2d');
+  const L = d.look;
+  const grad = g.createLinearGradient(0, 0, 0, c.height);
+  grad.addColorStop(0, d.theme.a); grad.addColorStop(1, d.theme.bg);
+  g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
+  const cx = c.width / 2, cy = 70, R = 50;
+  g.fillStyle = L.shirt; g.beginPath(); g.ellipse(cx, c.height + 10, 70, 44, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = L.skin; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  if (L.hair !== 'bald') { g.fillStyle = L.hairColor; g.beginPath(); g.arc(cx, cy - 4, R + 3, Math.PI * 1.05, Math.PI * 1.95); g.fill(); }
+  const face = document.createElement('canvas');
+  face.width = FACE_W; face.height = FACE_H;
+  drawFace(face.getContext('2d'), L, 'idle');
+  // the texture wraps a hemisphere; the middle of it is the part that faces you
+  g.drawImage(face, 96, 0, 320, 256, cx - R * 0.86, cy - R * 0.64, R * 1.72, R * 1.42);
+}
+
+function vsBrowse(i, quiet) {
+  if (!vs || vs.meReady) return;
+  vs.me = i;
+  save.vsPick = i; persist();
+  vs.net?.send({ k: 'sel', c: i, ready: false });
+  player.setGloveColor(ROSTER[i].look.gloves);
+  if (!quiet) audio.uiMove();
+  renderSelect();
+}
+
+function vsLock(on) {
+  if (!vs?.peer || screen !== 'vsSelect' || vs.meReady === on) return;
+  vs.meReady = on;
+  vs.net.send({ k: 'sel', c: vs.me, ready: on });
+  if (on) audio.stamp(); else audio.uiBack();
+  renderSelect();
+  vsMaybeGo();
+}
+
+function renderSelect() {
+  const d = ROSTER[vs.me], v = VS[d.id];
+  $('#scFloor').textContent = `FLOOR ${d.floor} · ${d.theme.floorName}`;
+  $('#scName').textContent = d.name;
+  $('#scTitle').textContent = d.title;
+  $('#scBars').innerHTML = Object.entries(v.bars).map(([k, n]) => `<dt>${k}</dt><dd>${Array.from({ length: 5 }, (_, j) => `<i class="${j < n ? 'on' : ''}"></i>`).join('')}</dd>`).join('');
+  $('#scGood').innerHTML = `<i>${v.perk[0]}</i> ${v.perk[1]}`;
+  $('#scWeak').innerHTML = `<i>${v.flaw[0]}</i> ${v.flaw[1]}`;
+  const sp = v.special;
+  const special = (sp.name || MOVE_NAMES[sp.id]) + (sp.seq ? ` · ${sp.seq.length}-hit flurry` : '');
+  $('#scMoves').innerHTML = [
+    ['TAP', `${{ fast: 'Fast', normal: 'Solid', heavy: 'Heavy' }[v.punch]} punches · land on openings`],
+    ['HOLD L', moveName(v.holdL)], ['HOLD R', moveName(v.holdR)],
+    [isCoarse ? 'SWIPE ↑' : 'SPACE', `${special} (full meter)`],
+  ].map(([k, t]) => `<tr><td>${k}</td><td>${t}</td></tr>`).join('');
+  for (const b of document.querySelectorAll('#selGrid .tile')) {
+    const i = +b.dataset.i;
+    b.classList.toggle('me', i === vs.me);
+    b.classList.toggle('locked', i === vs.me && vs.meReady);
+    b.classList.toggle('them', i === vs.them);
+  }
+  const them = $('#selThem');
+  them.textContent = !vs.peer ? 'OPPONENT DISCONNECTED' : vs.them === null ? 'OPPONENT IS BROWSING'
+    : `OPPONENT: ${ROSTER[vs.them].name}${vs.themReady ? ' · LOCKED IN' : ''}`;
+  them.classList.toggle('ready', vs.themReady);
+  const lock = $('#selLock');
+  lock.textContent = vs.meReady ? (vs.themReady ? 'MATCH SET' : 'LOCKED ✓ (UNLOCK)') : 'LOCK IN';
+  lock.classList.toggle('locked', vs.meReady);
+  // the ring shows who your opponent is looking at: that's who you'll face
+  if (vs.them !== null) {
+    const o = ROSTER[vs.them];
+    if (fighter.data !== o) { setFighter(vs.them); applyTheme(o); fighter.reset(); }
+    fighter.setPose(vs.themReady ? tauntPoseOf(o) : 'guard', 120, 14);
+    fighter.setExpr(vs.themReady ? 'taunt' : 'idle');
+  }
+}
+
+function startVsIntro() {
+  const me = ROSTER[vs.me], them = ROSTER[vs.them];
+  vs.meReady = vs.themReady = false;
+  vs.again = { me: false, them: false };
+  current = vs.them;
+  document.body.classList.add('vs');
+  audio.uiSelect();
+  audio.punchClock();
+  setFighter(vs.them);
+  applyTheme(them);
+  fighter.reset();
+  fx.clear();
+  time.reset();
+  post.fx.dark = 0; post.fx.sat = 1; post.fx.lowHp = 0;
+  arena.blackout(false);
+  player.reset();
+  player.setGloveColor(me.look.gloves);
+  ui.clearTransient();
+  ui.showHud(false);
+  feed.stop();
+  ui.setupFight(them, isCoarse);
+  $('#youTitle').textContent = `${me.name} · ${me.title}`;
+  $('#hudFloor').textContent = '1V1';
+  $('#meter .lbl span').textContent = 'SPECIAL';
+  fight = new Versus(me, them, ctx, vs.net, vs.host);
+  fight.intro();
+  screen = 'intro';
+  introT = 0;
+  vsMenu = false;
+  $('#iFloor').textContent = `1V1 · ${me.name} (YOU) VS`;
+  $('#iName').textContent = them.name;
+  $('#iTitle').textContent = them.title;
+  $('#iTag').textContent = them.tagline;
+  $('#iStats').innerHTML = Object.entries(VS[them.id].bars).map(([k, n]) => `<dt>${k}</dt><dd>${'■'.repeat(n)}${'□'.repeat(5 - n)}</dd>`).join('');
+  $('#iName').style.fontSize = them.name.length > 12 ? 'clamp(44px, 8vw, 110px)' : '';
+  show('intro');
+  player.setMenu(new THREE.Vector3(0.75, 1.45, 0.55), new THREE.Vector3(0, 1.5, -0.6), true);
+  setTimeout(() => player.menu && player.setMenu(new THREE.Vector3(0.35, 1.55, 0.95), new THREE.Vector3(0, 1.5, -0.6)), 30);
+  audio.stopMusic(0.4);
+  audio.setCrowd(0.5);
+  audio.cheer(0.5);
+  audio.say(`${me.name}. Versus. ${them.name}.`, { rate: 0.95, pitch: 0.6 });
+}
+
+function beginVsFight() {
+  const d = ROSTER[vs.them];
+  audio.playMusic('fight', { bpm: d.music.bpm, root: d.music.root, mood: d.music.mood, intensity: 0.3 });
+  input.setHoldMode(true);
+  fight.start();
+}
+
+function toVsEnd(r) {
+  screen = 'vsEnd';
+  vsMenu = false; overlay('pause', false);
+  input.setHoldMode(false);
+  ui.showHud(false); ui.clearTransient();
+  fx.dizzy(false);
+  const me = ROSTER[vs.me], them = ROSTER[vs.them];
+  const big = $('#veBig');
+  big.innerHTML = r.win ? 'YOU<br>WIN' : 'YOU\'RE<br>FIRED';
+  big.classList.toggle('lose', !r.win);
+  $('#veLine').textContent = {
+    ko: r.win ? `${them.name} has been let go. Effective immediately.` : `${them.name} let you go. Effective immediately.`,
+    decision: r.win ? 'The clock ran out. You won on points.' : 'The clock ran out. You lost on points.',
+    forfeit: `${them.name} clocked out early. The win is yours.`,
+  }[r.why];
+  const s = r.stats;
+  $('#veRows').innerHTML = `<tr><th>${me.name} (YOU)</th><th>VS ${them.name}</th></tr>` + [
+    ['PUNCHES LANDED', s.landed], ['PERFECT DODGES', s.perfects], ['COUNTERS', s.counters], ['SPECIALS', s.specials],
+    ['DAMAGE DEALT', Math.round(s.dmgDealt)], ['DAMAGE TAKEN', Math.round(s.dmgTaken)], ['KNOCKDOWNS SCORED', r.okd], ['KNOCKDOWNS TAKEN', r.pkd],
+  ].map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  show('vsEnd');
+  renderVsAgain();
+  audio.playMusic(r.win ? 'results' : 'fired');
+  audio.stinger(r.win ? 'levelup' : 'fired');
+}
+
+function renderVsAgain() {
+  if (screen !== 'vsEnd') return;
+  const name = ROSTER[vs.them].name.split(' ')[0];
+  $('#veAgain').textContent = !vs.peer ? 'YOUR OPPONENT LEFT' : vs.again.them ? `${name} WANTS A REMATCH` : vs.again.me ? `WAITING FOR ${name}` : '';
+  $('#veAgainBtn').textContent = vs.again.me ? 'WAITING…' : vs.again.them ? 'ACCEPT REMATCH' : 'REMATCH';
+}
+
+function vsAgain() {
+  if (!vs?.peer || screen !== 'vsEnd' || vs.again.me) return;
+  vs.again.me = true;
+  vs.net.send({ k: 'again' });
+  renderVsAgain();
+  vsMaybeGo();
+}
+
+async function vsCopy(b) {
+  try { await navigator.clipboard.writeText(vsLink()); b.textContent = 'COPIED'; }
+  catch { b.textContent = 'COPY FAILED'; }
+  setTimeout(() => { b.textContent = 'COPY INVITE LINK'; }, 1400);
+}
+function vsShare() {
+  navigator.share({ title: 'PUNCH CLOCK 1V1', text: 'Fight me in PUNCH CLOCK. Loser gets fired.', url: vsLink() }).catch(() => {});
+}
+
 // ---------- share ----------
 async function openShare() {
   const r = lastResult;
@@ -655,13 +1000,15 @@ function saveImage() {
 // ---------- pause ----------
 function setPause(on) {
   if (screen !== 'fight') return;
+  // versus never stops the clock: the menu opens over a live fight
+  if (vs) { vsMenu = on; overlay('pause', on); $('#quitBtn').textContent = 'LEAVE MATCH'; return; }
   paused = on;
   overlay('pause', on);
   $('#quitBtn').textContent = run ? 'CLOCK OUT (ENDS SHIFT)' : 'QUIT TO ELEVATOR';
   audio.setTimeScale(on ? 0.25 : 1);
   if (on) setTimeout(() => $('#pause .btn.big').focus(), 30);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight' && !paused) setPause(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight' && !paused && !vs) setPause(true); });
 
 // ---------- buttons ----------
 // the phone memo closes on the next tap anywhere, and that tap does nothing else (no stray FIGHT)
@@ -683,7 +1030,7 @@ document.addEventListener('click', (e) => {
     case 'startShift': startShift(); break;
     case 'perk': pickPerk(b.dataset.id || null); break;
     case 'copyShift': copyShift(b); break;
-    case 'quit': if (run) toTitle(); else toElevator(); break;
+    case 'quit': if (vs) vsLeave(); else if (run) toTitle(); else toElevator(); break;
     case 'howto': overlay('howto', true); break;
     case 'memo': elevEl.classList.add('memo-open'); break;
     case 'closeHowto': overlay('howto', false); break;
@@ -699,17 +1046,25 @@ document.addEventListener('click', (e) => {
     case 'closeShare': overlay('share', false); $('#shareVid').pause(); break;
     case 'shareTab': setShareTab(b.dataset.tab); break;
     case 'resume': setPause(false); break;
+    case 'vs': startVersus(newCode(), true); break;
+    case 'vsCopy': vsCopy(b); break;
+    case 'vsShare': vsShare(); break;
+    case 'vsLeave': vsLeave(); break;
+    case 'vsLock': vsLock(!vs?.meReady); break;
+    case 'vsTile': vsBrowse(+b.dataset.i); break;
+    case 'vsAgain': vsAgain(); break;
+    case 'vsPick': vs?.net.send({ k: 'pick' }); toVsSelect(); break;
     case 'pause': setPause(true); break;
   }
 });
 $('#title').addEventListener('click', (e) => { if (!e.target.closest('button')) { audio.init(); toElevator(); } });
-$('#intro').addEventListener('click', () => { introT = 99; beginFight(); });
+$('#intro').addEventListener('click', () => { if (vs) return; introT = 99; beginFight(); });
 $('#muteBtn').textContent = `SOUND: ${audio.muted ? 'OFF' : 'ON'}`;
 
 // ---------- input routing ----------
-input.on((action, down) => {
+input.on((action, down, src) => {
   if (down) audio.init();
-  if (!down) { if (screen === 'fight' && fight && !paused) fight.input(action, false); return; }
+  if (!down) { if (screen === 'fight' && fight && !paused && !vsMenu) fight.input(action, false, src); return; }
   if (action === 'mute') { const m = audio.toggleMute(); $('#muteBtn').textContent = `SOUND: ${m ? 'OFF' : 'ON'}`; return; }
   const howto = !$('#howto').classList.contains('hidden');
   const share = !$('#share').classList.contains('hidden');
@@ -740,9 +1095,15 @@ input.on((action, down) => {
       else if (action === 'pause') toTitle();
       break;
     case 'intro':
-      if (action !== 'any' && introT > 0.5) { introT = 99; beginFight(); }
+      if (action !== 'any' && introT > 0.5 && !vs) { introT = 99; beginFight(); }
       break;
     case 'fight':
+      if (vs) {
+        if (action === 'pause') setPause(!vsMenu);
+        else if (vsMenu) { if (action === 'confirm') setPause(false); }
+        else if (fight) fight.input(action, true, src);
+        return;
+      }
       if (action === 'pause') { setPause(!paused); return; }
       if (action === 'retry') { retry(); return; }
       if (paused) { if (action === 'confirm') setPause(false); return; }
@@ -760,6 +1121,20 @@ input.on((action, down) => {
       break;
     case 'ending':
       if (action === 'confirm' || action === 'pause') toElevator();
+      break;
+    case 'vsLobby':
+      if (action === 'pause') vsLeave();
+      else if (action === 'confirm') vsCopy($('#vlCopy'));
+      break;
+    case 'vsSelect':
+      if (action === 'left') vsBrowse((vs.me + ROSTER.length - 1) % ROSTER.length);
+      else if (action === 'right') vsBrowse((vs.me + 1) % ROSTER.length);
+      else if (action === 'confirm' || action === 'jabL' || action === 'jabR') vsLock(true);
+      else if (action === 'pause') { if (vs.meReady) vsLock(false); else vsLeave(); }
+      break;
+    case 'vsEnd':
+      if (action === 'confirm') vsAgain();
+      else if (action === 'pause') vsLeave();
       break;
   }
 });
@@ -835,6 +1210,7 @@ function step() {
   fx.update(dt, t, fighter ? headTmp : null, realDt);
   ui.update(realDt);
   if (screen === 'fight' && !paused) feed.update(realDt);
+  if (vs && screen === 'fight' && Math.floor(t * 2) !== Math.floor((t - realDt) * 2)) $('#hudFloor').textContent = vs.net?.rtt ? `1V1 · ${Math.round(vs.net.rtt)} MS` : '1V1';
   post.render(realDt, t);
   clip.update(realDt, canvas, paused);
   if (window.__pc?.onFrame) window.__pc.onFrame(canvas);
@@ -846,6 +1222,7 @@ function step() {
 
 toTitle();
 frame();
+if (new URLSearchParams(location.search).get('vs')) startVersus(new URLSearchParams(location.search).get('vs').toUpperCase(), false);
 
 // ?fight=N jumps straight into floor N (handy for testing a specific opponent); ?clean hides the
 // tutorial hints, for capturing footage
@@ -856,4 +1233,4 @@ if (qFight !== null && ROSTER[+qFight]) { startIntro(+qFight); introT = 99; begi
 
 // debugging hook for automated checks
 window.__pc = { get screen() { return screen; }, get fight() { return fight; }, get fighter() { return fighter; }, scene, camera, player, arena, post, startIntro, beginFight, toElevator, save, renderer,
-  get run() { return run; }, clip, step, toShift, startShift, pickPerk, next, retry, toShiftEnd, openShare };
+  get run() { return run; }, get vs() { return vs; }, clip, step, toShift, startShift, pickPerk, next, retry, toShiftEnd, openShare };

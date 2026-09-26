@@ -22,6 +22,10 @@ function makePoses(hs, drop = 0) {
   const P = {
     guard: {},
     open: { lx: -0.3, ly: Y(1.02), lz: 0.25, rx: 0.3, ry: Y(1.02), rz: 0.25, lean: -0.04, hLean: -0.05, y: -0.03 },
+    // versus: a human opponent slips and ducks (screen sides, like the gloves)
+    slipL: { x: -0.36, tilt: -0.22, twist: 0.12, lean: 0.12, hTilt: -0.1, y: -0.05, lx: -0.16, ly: Y(1.4), lz: 0.4, rx: 0.1, ry: Y(1.45), rz: 0.4 },
+    slipR: { x: 0.36, tilt: 0.22, twist: -0.12, lean: 0.12, hTilt: 0.1, y: -0.05, lx: -0.1, ly: Y(1.45), lz: 0.4, rx: 0.16, ry: Y(1.4), rz: 0.4 },
+    duck: { y: -0.34, lean: 0.34, squash: 0.45, hLean: 0.2, lx: -0.12, ly: Y(1.25), lz: 0.42, rx: 0.12, ry: Y(1.25), rz: 0.42 },
     block: { lx: -0.085, ly: Y(1.53), lz: 0.43, rx: 0.085, ry: Y(1.53), rz: 0.43, lean: 0.2, y: -0.05, hLean: 0.3 },
     // Windups read as a whole-body shape: jabs rock back, hooks coil and dip a shoulder, uppercuts
     // crouch (squash > 0), smashes rise tall (squash < 0), throws wind the arm far back.
@@ -61,16 +65,22 @@ function makePoses(hs, drop = 0) {
   };
   const out = {};
   for (const k in P) out[k] = { ...base, ...P[k] };
+  // versus: a human throws the one-handed specials with either hand, so those poses get mirrors ('M')
+  for (const k of ['windSmash', 'smash', 'windThrow', 'throw', 'windPivot', 'pivot', 'windTakeover', 'takeover']) {
+    const q = out[k];
+    out[k + 'M'] = { ...q, x: -q.x, twist: -q.twist, tilt: -q.tilt, hTwist: -q.hTwist, hTilt: -q.hTilt,
+      lx: -q.rx, ly: q.ry, lz: q.rz, rx: -q.lx, ry: q.ly, rz: q.lz };
+  }
   return out;
 }
 
 // ---------- face ----------
-const FACE_W = 512, FACE_H = 256;
+export const FACE_W = 512, FACE_H = 256;
 // The face texture covers the front hemisphere: 180° wide, theta 0.28π..0.78π tall.
 const THETA0 = 0.28 * Math.PI, THETA_L = 0.5 * Math.PI;
 const INK = '#1a0c12';
 
-function drawFace(ctx, look, expr) {
+export function drawFace(ctx, look, expr) {
   const f = look.face || {};
   ctx.clearRect(0, 0, FACE_W, FACE_H);
   ctx.lineCap = 'round';

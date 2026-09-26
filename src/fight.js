@@ -9,7 +9,7 @@ import { rand, pick, weighted, clamp } from './spring.js';
 const PERFECT_WIN = 0.12;       // dodge started this close to impact = PERFECT
 const DODGE_MIN = 0.42, DODGE_MAX = 0.6, DODGE_RECOVER = 0.14;
 const PUNCH = { L: { startup: 0.075, recover: 0.15, dmg: 3.4 }, R: { startup: 0.11, recover: 0.2, dmg: 5.6 } };
-const TELL_COLORS = { jab: '#fff4c2', hook: '#ff3b6b', upper: '#ff3b3b', smash: '#ff8a1a', throw: '#7df9ff', special: '#d36bff' };
+export const TELL_COLORS = { jab: '#fff4c2', hook: '#ff3b6b', upper: '#ff3b3b', smash: '#ff8a1a', throw: '#7df9ff', special: '#d36bff' };
 
 export class Fight {
   constructor(data, index, ctx, opts = {}) {
