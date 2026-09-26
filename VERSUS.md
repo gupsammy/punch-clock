@@ -21,7 +21,14 @@ The room creator is the **host**: it starts the fight and owns the round clock. 
   exchanging SDP" to **both** players at once. The fallback is a Cloudflare TURN relay: `api/turn.mjs`
   (a Vercel function) trades `CF_TURN_KEY_ID` + `CF_TURN_API_TOKEN` (Vercel env vars, from Cloudflare
   dashboard → Realtime → TURN Server) for 6-hour credentials, and `net.js` passes them as `turnConfig`.
-  Without the env vars (or on the local dev server) only direct links work.
+  Without the env vars (or on the local dev server) only direct links work. Tested relay-only
+  (`iceTransportPolicy: 'relay'` on both sides): connects in about 6 s.
+- A guest that hears nothing for 20 s is told the room isn't answering. With the relay in place, the
+  usual cause is the host's page, not the network: a phone that left to send the invite (share sheet,
+  WhatsApp) may suspend the page. A lobby still waiting after 5 s hidden rejoins its room on return
+  (`vsConnect`). Trystero returns a room still being left, so `net.js` waits for the leave first.
+- Relay traffic, measured through Cloudflare with both players mashing: about 2 KB/s each way per
+  player during a fight, about 0.2 KB/s in the lobby and select screen.
 - **Dev transport**: `?vs=CODE&net=local` swaps WebRTC for a BroadcastChannel between two tabs on one
   origin. `&lag=MS` delays every message both ways on either transport, to test lag.
 - One message stream, ordered and reliable (low volume: events, not frames). Round-trip time is
@@ -101,8 +108,8 @@ computes the damage.
 ## Select screen (POV)
 The camera sits where you fight. The fighter your friend is hovering stands in the ring in front of
 you and swaps live as they browse; your gloves take your pick's glove colour. Your card (name, bars,
-good at / watch out, moves) sits on the left; six face tiles along the bottom (faces drawn by the
-fighter's own face painter). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap
+good at / watch out, moves) sits on the left; six face tiles along the bottom (each fighter's real
+3D head, rendered once on a throwaway renderer while the lobby waits, then cached). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap
 a tile, tap LOCK IN. The ring wears your opponent's floor: you fight on their turf.
 
 ## Messages
@@ -117,7 +124,7 @@ src/versus.js    Versus: local body + remote render + resolution rules (plays th
 src/config.js    VS: per-character versus stats and moves
 src/main.js      lobby, select, result screens; routes input to Versus
 src/player.js    per-glove materials, wind-up poses, glove colour
-src/fighter.js   slip and duck poses; face painter exported for select tiles
+src/fighter.js   slip and duck poses
 src/input.js     hold mode: touch reports press and release so holds work
 ```
 Not in v1: clip recording, share card, company chat feed, spectators, matchmaking with strangers.

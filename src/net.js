@@ -19,6 +19,9 @@ async function turnServers() {
   } catch { return undefined; }
 }
 
+// Trystero hands back a room that is still being left, so a rejoin waits for the leave to finish.
+let leaving = Promise.resolve();
+
 // handlers: { msg(m), join(), leave(), error(text) }
 export async function connect({ code, local = false, lag = 0 }, handlers) {
   let peer = null;
@@ -71,7 +74,7 @@ export async function connect({ code, local = false, lag = 0 }, handlers) {
     window.addEventListener('pagehide', bye);
     close = () => { bye(); window.removeEventListener('pagehide', bye); ch.close(); };
   } else {
-    const [{ joinRoom }, turnConfig] = await Promise.all([import('../vendor/trystero/trystero-nostr.js'), turnServers()]);
+    const [{ joinRoom }, turnConfig] = await Promise.all([import('../vendor/trystero/trystero-nostr.js'), turnServers(), leaving]);
     const room = joinRoom({ appId: APP_ID, turnConfig }, code, {
       onJoinError: (d) => handlers.error(d?.error ? String(d.error) : 'connection failed'),
     });
@@ -84,7 +87,7 @@ export async function connect({ code, local = false, lag = 0 }, handlers) {
     };
     room.onPeerJoin = (id) => joined(id);
     room.onPeerLeave = (id) => left(id);
-    close = () => room.leave();
+    close = () => { leaving = room.leave().catch(() => {}); };
   }
 
   const pinger = setInterval(() => send({ k: '_ping', t: performance.now() }), 2000);

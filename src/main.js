@@ -3,7 +3,7 @@ import { ROSTER, GRADES, REVIEW_NOTES, FIRED_LINES, START_TITLE, VS } from './co
 import { createFeed } from './feed.js';
 import { createClip } from './clip.js';
 import { createArena } from './arena.js';
-import { Fighter, drawFace, FACE_W, FACE_H } from './fighter.js';
+import { Fighter } from './fighter.js';
 import { Player, CAM_BASE, LOOK_AT } from './player.js';
 import { FX } from './fx.js';
 import { createPost } from './post.js';
@@ -602,24 +602,30 @@ function startVersus(code, creator) {
   run = null; fight = null; paused = false; overlay('pause', false);
   document.body.classList.remove('in-run');
   const q = new URLSearchParams(location.search);
-  vs = { code, creator, net: null, peer: false, gotHi: false, host: false, r: Math.random(), me: save.vsPick ?? 0, them: null,
+  vs = { code, creator, net: null, gen: 0, peer: false, gotHi: false, host: false, r: Math.random(), me: save.vsPick ?? 0, them: null,
     meReady: false, themReady: false, again: { me: false, them: false }, local: q.get('net') === 'local', lag: +q.get('lag') || 0 };
   history.replaceState(null, '', vsLink());
   toVsLobby();
-  const mine = vs;
-  const live = (fn) => (...a) => { if (vs === mine) fn(...a); };
-  connect({ code, local: vs.local, lag: vs.lag }, {
+  vsConnect();
+}
+
+// Join (or rejoin) the room. Each call replaces the last connection; the old one's late callbacks are dropped.
+function vsConnect() {
+  const mine = vs, gen = ++mine.gen;
+  mine.net?.close(); mine.net = null;
+  const live = (fn) => (...a) => { if (vs === mine && mine.gen === gen) fn(...a); };
+  connect({ code: mine.code, local: mine.local, lag: mine.lag }, {
     msg: live(onVsMsg), join: live(onVsJoin), leave: live(onVsLeave),
-    error: live(() => vsStatus('Could not connect to your friend. Some office and mobile networks block direct links; try another network.', 'bad')),
+    error: live(() => vsStatus('Found your friend but could not connect. Both go back and try again.', 'bad')),
   }).then((n) => {
-    if (vs !== mine) { n.close(); return; }
+    if (vs !== mine || mine.gen !== gen) { n.close(); return; }
     mine.net = n;
     if (mine.peer) sendHi();
-  }).catch(() => { if (vs === mine) vsStatus('Could not load the connection code. Check your internet and try again.', 'bad'); });
-  // a guest that hears nothing probably sits behind a network that blocks direct links
-  setTimeout(() => {
-    if (vs === mine && !mine.peer && !creator) vsStatus('Still can\'t reach your friend. Check they have the room open, or try another network (some block direct connections).', 'bad');
-  }, 20000);
+  }).catch(live(() => vsStatus('Could not load the connection code. Check your internet and try again.', 'bad')));
+  // the relay (api/turn.mjs) gets through almost any network, so silence means the room isn't answering
+  setTimeout(live(() => {
+    if (!mine.peer && !mine.creator) vsStatus(`No answer from room ${mine.code} yet. Ask your friend to open the game and stay on the room screen. Still trying…`, 'wait');
+  }), 20000);
 }
 
 function vsClose() {
@@ -655,9 +661,11 @@ function toVsLobby() {
   $('#vlCode').textContent = vs.code;
   $('#vlSend').classList.toggle('hidden', !vs.creator);
   $('#vlInput').value = ''; $('#vlJoinBtn').disabled = true;
-  vsStatus(vs.creator ? 'Waiting for your friend to join' : `Joining room ${vs.code}`, 'wait');
+  vsStatus(vs.creator ? 'Waiting for your friend. Keep this screen open until they join' : `Joining room ${vs.code}`, 'wait');
   show('vsLobby');
   audio.playMusic('elevator');
+  // the shader compile is a visible hitch on phones: pay it while waiting, not when the friend arrives
+  setTimeout(portraits, 600);
 }
 
 function sendHi() { vs.net.send({ k: 'hi', v: VS_VERSION, r: vs.r }); }
@@ -735,8 +743,8 @@ function buildTiles() {
     const b = document.createElement('button');
     b.className = 'tile'; b.dataset.act = 'vsTile'; b.dataset.i = i;
     const c = document.createElement('canvas');
-    c.width = 156; c.height = 140;
-    paintTile(c, d);
+    c.width = TILE_W; c.height = TILE_H;
+    paintTile(c, d, i);
     const name = document.createElement('span');
     name.textContent = d.name.split(' ')[0];
     const them = document.createElement('em');
@@ -746,22 +754,51 @@ function buildTiles() {
   });
 }
 
-// a head-and-shoulders mugshot from the fighter's own face painter
-function paintTile(c, d) {
+// A mugshot of the real fighter over their floor's colours.
+function paintTile(c, d, i) {
   const g = c.getContext('2d');
-  const L = d.look;
   const grad = g.createLinearGradient(0, 0, 0, c.height);
   grad.addColorStop(0, d.theme.a); grad.addColorStop(1, d.theme.bg);
   g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
-  const cx = c.width / 2, cy = 70, R = 50;
-  g.fillStyle = L.shirt; g.beginPath(); g.ellipse(cx, c.height + 10, 70, 44, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = L.skin; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
-  if (L.hair !== 'bald') { g.fillStyle = L.hairColor; g.beginPath(); g.arc(cx, cy - 4, R + 3, Math.PI * 1.05, Math.PI * 1.95); g.fill(); }
-  const face = document.createElement('canvas');
-  face.width = FACE_W; face.height = FACE_H;
-  drawFace(face.getContext('2d'), L, 'idle');
-  // the texture wraps a hemisphere; the middle of it is the part that faces you
-  g.drawImage(face, 96, 0, 320, 256, cx - R * 0.86, cy - R * 0.64, R * 1.72, R * 1.42);
+  g.drawImage(portraits()[i], 0, 0);
+}
+
+// Each fighter's head, rendered once and kept. It uses a throwaway renderer because the main canvas
+// has no depth buffer, and a render target would skip the tone mapping the fight uses.
+const TILE_W = 156, TILE_H = 140;
+let portraitCache = null;
+function portraits() {
+  if (portraitCache) return portraitCache;
+  const w = TILE_W, h = TILE_H;
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setSize(w, h, false);
+  r.toneMapping = renderer.toneMapping; r.toneMappingExposure = EXPOSURE; r.outputColorSpace = renderer.outputColorSpace;
+  const sc = new THREE.Scene();
+  const key = new THREE.DirectionalLight(0xffe6c8, 2.6); key.position.set(-1, 2, 3);
+  sc.add(key, new THREE.HemisphereLight(0xb8c4ff, 0x302040, 1.4));
+  const cam = new THREE.PerspectiveCamera(20, w / h, 0.1, 20);
+  const head = new THREE.Vector3();
+  portraitCache = ROSTER.map((d) => {
+    const f = new Fighter(d);
+    f.springs.snapAll(f.poses.open); // hands down, clear of the face
+    f.setExpr('taunt');
+    sc.add(f.root);
+    f.update(0, 0, false);
+    f.root.updateMatrixWorld(true);
+    f.headWorld(head);
+    // the head fills about two thirds of the frame, with a little collar below
+    const R = f.headR, dist = (R * 3.6) / Math.tan(THREE.MathUtils.degToRad(10)) / 2;
+    cam.position.set(head.x, head.y - R * 0.2, head.z + dist);
+    cam.lookAt(head.x, head.y - R * 0.2, head.z);
+    r.render(sc, cam);
+    const shot = document.createElement('canvas');
+    shot.width = w; shot.height = h;
+    shot.getContext('2d').drawImage(r.domElement, 0, 0);
+    sc.remove(f.root); f.dispose();
+    return shot;
+  });
+  r.dispose(); r.forceContextLoss();
+  return portraitCache;
 }
 
 function vsBrowse(i, quiet) {
@@ -1028,7 +1065,13 @@ function setPause(on) {
   audio.setTimeScale(on ? 0.25 : 1);
   if (on) setTimeout(() => $('#pause .btn.big').focus(), 30);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight' && !paused && !vs) setPause(true); });
+// A phone that leaves to send the invite may come back with its relay sockets dead (mobile browsers
+// suspend hidden pages), so a lobby still waiting after a while away rejoins its room.
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = performance.now(); if (screen === 'fight' && !paused && !vs) setPause(true); return; }
+  if (vs && !vs.peer && screen === 'vsLobby' && performance.now() - hiddenAt > 5000) vsConnect();
+});
 
 // ---------- buttons ----------
 // the phone memo closes on the next tap anywhere, and that tap does nothing else (no stray FIGHT)

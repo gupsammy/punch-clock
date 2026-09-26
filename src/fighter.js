@@ -75,12 +75,12 @@ function makePoses(hs, drop = 0) {
 }
 
 // ---------- face ----------
-export const FACE_W = 512, FACE_H = 256;
+const FACE_W = 512, FACE_H = 256;
 // The face texture covers the front hemisphere: 180° wide, theta 0.28π..0.78π tall.
 const THETA0 = 0.28 * Math.PI, THETA_L = 0.5 * Math.PI;
 const INK = '#1a0c12';
 
-export function drawFace(ctx, look, expr) {
+function drawFace(ctx, look, expr) {
   const f = look.face || {};
   ctx.clearRect(0, 0, FACE_W, FACE_H);
   ctx.lineCap = 'round';
