@@ -6,6 +6,18 @@ const APP_ID = 'punch-clock-vs-1';
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export const newCode = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+// what a friend typed, uppercased and cut down to code characters
+export const cleanCode = (t) => t.toUpperCase().replace(/[^A-Z0-9]/g, '').split('').filter((c) => CODE_CHARS.includes(c)).join('').slice(0, 6);
+
+// TURN relay credentials from the Vercel function (api/turn.mjs). When two phones cannot link directly
+// (router without hairpin NAT, carrier NAT, client isolation) the traffic goes through Cloudflare instead.
+// Missing on the local dev server: then only direct links work.
+async function turnServers() {
+  try {
+    const r = await fetch('/api/turn', { signal: AbortSignal.timeout(4000) });
+    return r.ok ? (await r.json()).iceServers : undefined;
+  } catch { return undefined; }
+}
 
 // handlers: { msg(m), join(), leave(), error(text) }
 export async function connect({ code, local = false, lag = 0 }, handlers) {
@@ -59,8 +71,8 @@ export async function connect({ code, local = false, lag = 0 }, handlers) {
     window.addEventListener('pagehide', bye);
     close = () => { bye(); window.removeEventListener('pagehide', bye); ch.close(); };
   } else {
-    const { joinRoom } = await import('../vendor/trystero/trystero-nostr.js');
-    const room = joinRoom({ appId: APP_ID }, code, {
+    const [{ joinRoom }, turnConfig] = await Promise.all([import('../vendor/trystero/trystero-nostr.js'), turnServers()]);
+    const room = joinRoom({ appId: APP_ID, turnConfig }, code, {
       onJoinError: (d) => handlers.error(d?.error ? String(d.error) : 'connection failed'),
     });
     const action = room.makeAction('m');

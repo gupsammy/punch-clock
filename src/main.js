@@ -10,7 +10,7 @@ import { createPost } from './post.js';
 import { createInput } from './input.js';
 import { Fight } from './fight.js';
 import { Versus } from './versus.js';
-import { connect, newCode } from './net.js';
+import { connect, newCode, cleanCode } from './net.js';
 import { ui, makeCard, fmtTime } from './ui.js';
 import { audio, AUDIO_DEBUG } from './audio.js';
 if (AUDIO_DEBUG) import('./audiodebug.js');
@@ -183,7 +183,7 @@ function toTitle() {
   run = null;
   document.body.classList.remove('in-run');
   paused = false; overlay('pause', false);
-  $('#shiftBtn').textContent = `DAILY SHIFT #${shiftNumber()}`;
+  $('#shiftSub').textContent = `#${shiftNumber()} · NEW EACH DAY`;
   ui.showHud(false);
   ui.clearTransient();
   current = Math.min(save.unlocked, ROSTER.length - 1);
@@ -650,10 +650,12 @@ function toVsLobby() {
   fighter.setPose(tauntPoseOf(d), 80, 10); fighter.setExpr('taunt');
   player.reset();
   player.setMenu(new THREE.Vector3(1.2, 1.7, 1.6), new THREE.Vector3(0.4, 1.3, -0.6), true);
+  // a guest is in someone else's room: nothing to send, but they can still switch to another code
+  $('#vlLabel').textContent = vs.creator ? 'YOUR ROOM CODE' : 'ROOM CODE';
   $('#vlCode').textContent = vs.code;
-  $('#vlLink').textContent = vsLink();
-  $('#vlShare').classList.toggle('hidden', !navigator.share);
-  vsStatus(vs.creator ? 'Waiting for your friend to open the link' : `Joining room ${vs.code}`, 'wait');
+  $('#vlSend').classList.toggle('hidden', !vs.creator);
+  $('#vlInput').value = ''; $('#vlJoinBtn').disabled = true;
+  vsStatus(vs.creator ? 'Waiting for your friend to join' : `Joining room ${vs.code}`, 'wait');
   show('vsLobby');
   audio.playMusic('elevator');
 }
@@ -910,14 +912,32 @@ function vsAgain() {
   vsMaybeGo();
 }
 
-async function vsCopy(b) {
-  try { await navigator.clipboard.writeText(vsLink()); b.textContent = 'COPIED'; }
+async function flashCopy(b, text, done) {
+  const label = b.textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = done; }
   catch { b.textContent = 'COPY FAILED'; }
-  setTimeout(() => { b.textContent = 'COPY INVITE LINK'; }, 1400);
+  setTimeout(() => { b.textContent = label; }, 1400);
 }
-function vsShare() {
-  navigator.share({ title: 'PUNCH CLOCK 1V1', text: 'Fight me in PUNCH CLOCK. Loser gets fired.', url: vsLink() }).catch(() => {});
+// phones get the share sheet (WhatsApp, Messages…); desktops copy the link
+function vsSend() {
+  const text = `Fight me in PUNCH CLOCK. Loser gets fired. Room code ${vs.code}`;
+  if (navigator.share && document.body.classList.contains('touch')) navigator.share({ title: 'PUNCH CLOCK 1V1', text, url: vsLink() }).catch(() => {});
+  else flashCopy($('#vlSendBtn'), vsLink(), 'LINK COPIED');
 }
+function vsJoinCode() {
+  const code = cleanCode($('#vlInput').value);
+  if (code.length !== 6) return;
+  if (code === vs.code) { vsStatus('That is your own code. Send it to your friend, or type theirs.', 'bad'); return; }
+  $('#vlInput').blur();
+  audio.uiSelect();
+  startVersus(code, false);
+}
+$('#vlInput').addEventListener('input', (e) => {
+  const v = cleanCode(e.target.value);
+  if (e.target.value !== v) e.target.value = v;
+  $('#vlJoinBtn').disabled = v.length !== 6;
+});
+$('#vlJoin').addEventListener('submit', (e) => { e.preventDefault(); vsJoinCode(); });
 
 // ---------- share ----------
 async function openShare() {
@@ -1047,8 +1067,8 @@ document.addEventListener('click', (e) => {
     case 'shareTab': setShareTab(b.dataset.tab); break;
     case 'resume': setPause(false); break;
     case 'vs': startVersus(newCode(), true); break;
-    case 'vsCopy': vsCopy(b); break;
-    case 'vsShare': vsShare(); break;
+    case 'vsSend': vsSend(); break;
+    case 'vsCopyCode': flashCopy(b, vs.code, b.id === 'vlCode' ? 'COPIED' : 'CODE COPIED'); break;
     case 'vsLeave': vsLeave(); break;
     case 'vsLock': vsLock(!vs?.meReady); break;
     case 'vsTile': vsBrowse(+b.dataset.i); break;
@@ -1124,7 +1144,7 @@ input.on((action, down, src) => {
       break;
     case 'vsLobby':
       if (action === 'pause') vsLeave();
-      else if (action === 'confirm') vsCopy($('#vlCopy'));
+      else if (action === 'confirm' && vs.creator) vsSend();
       break;
     case 'vsSelect':
       if (action === 'left') vsBrowse((vs.me + ROSTER.length - 1) % ROSTER.length);

@@ -62,7 +62,7 @@ panel slide off. The fight itself starts with no wipe. `?clean` hides the tutori
 Grades: S "EXCEEDS EXPECTATIONS", A "STRONG PERFORMER", B "MEETS EXPECTATIONS", C "NEEDS IMPROVEMENT", D "PIP".
 
 ## Daily Shift (career run)
-A second mode beside the ladder. Title → **DAILY SHIFT #N** → shift memo (today's modifier, pick one
+A second mode beside the ladder. Title → **DAILY CHALLENGE** (caption `#N · NEW EACH DAY`; in-game it is the shift) → shift memo (today's modifier, pick one
 perk) → all six floors back to back, no elevator. N = days since 2026-09-01; everyone gets the same
 modifier on the same day (chosen from N, not random).
 - **Clock**: the shift time is the sum of in-fight time on every attempt, failures included.

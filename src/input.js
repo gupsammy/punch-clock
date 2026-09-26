@@ -18,7 +18,7 @@ export function createInput(target) {
   };
 
   window.addEventListener('keydown', (e) => {
-    if (e.metaKey || e.ctrlKey) return;
+    if (e.metaKey || e.ctrlKey || e.target.closest?.('input')) return; // typing a room code is not a punch
     const a = KEYS[e.code];
     if (!a) { if (!e.repeat) emit('any', true, 'key'); return; }
     e.preventDefault();

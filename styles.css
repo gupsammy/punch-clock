@@ -499,15 +499,32 @@ body.touch .tap { display: inline; }
 .end-memo b { display: block; font-size: 11px; letter-spacing: .14em; color: #c9162f; margin-bottom: 6px; }
 
 /* ---------- 1v1 versus (VERSUS.md) ---------- */
-.btn.vsbtn { background: var(--b); color: #fff; box-shadow: 6px 6px 0 var(--a); }
+/* ---------- title mode buttons: fixed colours so each mode stays itself whatever the opponent's theme ---------- */
+.btn.mode { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.btn.mode small { font: 700 10px var(--mono); letter-spacing: .14em; margin-top: 5px; opacity: .72; }
+.btn.m-play { background: #ffd23f; color: var(--ink); box-shadow: 6px 6px 0 #ff2e55; }
+.btn.m-daily { background: #22e5ff; color: var(--ink); box-shadow: 6px 6px 0 #3b2bff; }
+.btn.m-vs { background: #ff2e88; color: #fff; box-shadow: 6px 6px 0 #ffd23f; }
+.btn.mode:hover, .btn.mode:focus-visible { background: #fff; color: var(--ink); }
+
 #vsLobby { background: rgba(7,5,10,.6); backdrop-filter: blur(3px); overflow: auto; align-items: flex-start; }
-.vl-code { font-family: var(--display); font-size: clamp(48px, 12vw, 84px); letter-spacing: .18em; text-align: center; color: #1d1a22; margin: 14px 0 0; transform: skewX(-8deg); }
-.vl-code:empty { display: none; }
+.vl-label { text-align: center; font-size: 10px; letter-spacing: .24em; color: #777; margin-top: 14px; }
+.vl-code { display: block; width: 100%; border: 0; background: none; cursor: pointer; font-family: var(--display); font-size: clamp(48px, 13vw, 84px); letter-spacing: .18em; text-align: center; color: #1d1a22; margin: 0; padding: 0 0 0 .18em; transform: skewX(-8deg); }
+.vl-send { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 12px 0 4px; }
+.btn.dark { background: #1d1a22; color: #fff; box-shadow: 5px 5px 0 var(--b); }
+.btn.dark:hover, .btn.dark:focus-visible { background: #3a3444; }
+.btn:disabled { opacity: .35; pointer-events: none; }
+.vl-join { margin: 18px 0 4px; padding-top: 14px; border-top: 2px dashed rgba(0,0,0,.2); text-align: center; }
+.vl-join label { display: block; font-size: 11px; letter-spacing: .16em; color: #1d1a22; font-weight: 800; margin-bottom: 8px; }
+.vl-row { display: flex; gap: 12px; justify-content: center; align-items: center; }
+#vlInput { width: 7.4em; font: 400 30px var(--display); letter-spacing: .16em; text-transform: uppercase; text-align: center; color: #1d1a22;
+  background: #fff; border: 0; box-shadow: inset 0 0 0 2px #1d1a22; padding: 6px 4px; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
+#vlInput::placeholder { color: rgba(0,0,0,.18); }
+#vlInput:focus { outline: none; box-shadow: inset 0 0 0 3px var(--b); }
 .vl-status { text-align: center; font-size: 13px; color: #1d1a22; margin: 6px 0; min-height: 18px; }
 .vl-status.wait::after { content: '…'; animation: blink 1s steps(2) infinite; }
 .vl-status.bad { color: var(--red); font-weight: 800; }
 @keyframes blink { 50% { opacity: 0; } }
-.vl-link { text-align: center; font-size: 12px; color: #555; word-break: break-all; -webkit-user-select: text; user-select: text; }
 
 /* select: the ring stays visible; the card hugs the left, the tiles the bottom */
 #vsSelect { align-items: stretch; justify-content: space-between; flex-direction: column; padding: calc(14px + var(--safe-t)) 20px calc(14px + var(--safe-b)); pointer-events: none; }
@@ -568,4 +585,31 @@ body.vs #hudScore, body.vs #invoice, body.vs .intro-skip { display: none; }
   .tile { width: 56px; } .tile canvas { width: 56px; height: 50px; }
   .sel-grid { gap: 6px; }
   .sel-actions .btn.big { font-size: 20px; padding: 9px 18px; }
+}
+
+/* title on phones. Upright: CLOCK IN across the top, the two other modes side by side, the small stuff below.
+   Sideways: one row. Either way the menu stays clear of the fine print. */
+@media (max-width: 560px) {
+  #title .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; width: min(100%, 360px); }
+  #title .menu .btn { font-size: 17px; padding: 10px 6px; }
+  #title .menu .btn.big { grid-column: 1 / -1; font-size: 28px; padding: 12px; }
+  #title .menu .btn.mode small { font-size: 9px; letter-spacing: .1em; }
+  #title .menu .btn:not(.mode) { font-size: 14px; padding: 8px 6px; }
+  .sub { margin-top: 14px; }
+  .blurb { margin-bottom: 10px; }
+  .press { margin-top: 10px; }
+}
+@media (max-width: 560px) and (max-height: 740px) {
+  .fine { display: none; }
+  .card-holes { display: none; }
+  .blurb br { display: none; }
+}
+@media (max-height: 520px) {
+  #title .menu { gap: 12px; }
+  #title .menu .btn { font-size: 15px; padding: 8px 14px; }
+  #title .menu .btn.big { font-size: 22px; padding: 8px 22px; }
+  #title .menu .btn.mode small { font-size: 8px; margin-top: 3px; }
+  .sub { margin-top: 10px; }
+  .press { margin-top: 6px; }
+  .card-holes { display: none; }
 }

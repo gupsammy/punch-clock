@@ -100,9 +100,9 @@
     <p class="sub">A CORPORATE BOXING SIMULATOR</p>
     <p class="blurb">You've been laid off. HR says there's one opening left.<br>It's on the top floor.</p>
     <div class="menu">
-      <button class="btn big" data-act="start">CLOCK IN</button>
-      <button class="btn shift" data-act="shift" id="shiftBtn">DAILY SHIFT</button>
-      <button class="btn vsbtn" data-act="vs">1V1 WITH A FRIEND</button>
+      <button class="btn big mode m-play" data-act="start">CLOCK IN<small>STORY · 6 FLOORS</small></button>
+      <button class="btn mode m-daily" data-act="shift">DAILY CHALLENGE<small id="shiftSub">NEW EVERY DAY</small></button>
+      <button class="btn mode m-vs" data-act="vs">VS A FRIEND<small>1V1 ONLINE</small></button>
       <button class="btn" data-act="howto">HOW TO FIGHT</button>
       <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>
     </div>
@@ -195,18 +195,23 @@
         <div><b>1V1 · MEETING INVITE</b><span>ONE ROOM · TWO EMPLOYEES</span></div>
         <div class="r-logo">PUNCH<br>CLOCK</div>
       </div>
-      <div class="vl-code" id="vlCode"></div>
+      <div class="vl-label" id="vlLabel">YOUR ROOM CODE</div>
+      <button class="vl-code" id="vlCode" data-act="vsCopyCode" aria-label="Copy room code"></button>
       <p class="vl-status" id="vlStatus"></p>
-      <div class="vl-link" id="vlLink"></div>
-      <ul class="s-rules">
-        <li>Send the link. When your friend opens it, you both pick a fighter.</li>
-        <li>Tap to punch. Hold to throw your fighter's heavy. Swipe up for the special.</li>
-        <li>Hits land on the screen of whoever could have dodged them.</li>
-      </ul>
+      <div class="vl-send" id="vlSend">
+        <button class="btn big" data-act="vsSend" id="vlSendBtn">SEND INVITE LINK</button>
+        <button class="btn dark" data-act="vsCopyCode" id="vlCopyCode">COPY CODE</button>
+      </div>
+      <form class="vl-join" id="vlJoin">
+        <label for="vlInput">GOT A CODE FROM A FRIEND?</label>
+        <div class="vl-row">
+          <input id="vlInput" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+            placeholder="ABC234" enterkeyhint="go" aria-label="Friend's room code">
+          <button class="btn dark" type="submit" id="vlJoinBtn" disabled>JOIN</button>
+        </div>
+      </form>
     </div>
     <div class="r-actions">
-      <button class="btn big" data-act="vsCopy" id="vlCopy">COPY INVITE LINK</button>
-      <button class="btn" data-act="vsShare" id="vlShare">SHARE</button>
       <button class="btn ghost" data-act="vsLeave">BACK</button>
     </div>
   </div>

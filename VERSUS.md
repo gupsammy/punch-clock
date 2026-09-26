@@ -5,8 +5,9 @@ in front of you. The single-player loop (read, dodge, punish) runs on both sides
 throws telegraphed attacks like a boss and fast punches into openings like the player.
 
 ## Flow
-Title → **1V1** → lobby (room link: COPY / SHARE) → friend opens link → **character select** (both,
-live) → both locked → intro card "YOU vs THEM" → fight → **result** (REMATCH / NEW FIGHTERS / LEAVE).
+Title → **VS A FRIEND** → lobby (a fresh room code: SEND INVITE LINK — share sheet on phones, copy on
+desktop — or COPY CODE; or type a friend's code and JOIN) → friend opens the link or types the code →
+**character select** (both, live) → both locked → intro card "YOU vs THEM" → fight → **result** (REMATCH / NEW FIGHTERS / LEAVE).
 The room creator is the **host**: it starts the fight and owns the round clock. Nothing else differs.
 
 ## Network
@@ -15,8 +16,12 @@ The room creator is the **host**: it starts the fight and owns the round clock. 
   directly. The Vercel deploy stays static.
 - A link is `?vs=CODE` (6 characters). App id `punch-clock-vs-1`. Rooms take two players; a third is
   ignored.
-- About 1 in 10 networks block a direct link. Then the lobby says so. Fix later by adding a TURN server
-  to `turnConfig` in `net.js`; nothing else changes.
+- Some networks cannot link two phones directly, even two phones on the same home Wi-Fi: routers
+  without hairpin NAT, carrier NAT, client isolation. Trystero then reports "could not connect after
+  exchanging SDP" to **both** players at once. The fallback is a Cloudflare TURN relay: `api/turn.mjs`
+  (a Vercel function) trades `CF_TURN_KEY_ID` + `CF_TURN_API_TOKEN` (Vercel env vars, from Cloudflare
+  dashboard → Realtime → TURN Server) for 6-hour credentials, and `net.js` passes them as `turnConfig`.
+  Without the env vars (or on the local dev server) only direct links work.
 - **Dev transport**: `?vs=CODE&net=local` swaps WebRTC for a BroadcastChannel between two tabs on one
   origin. `&lag=MS` delays every message both ways on either transport, to test lag.
 - One message stream, ordered and reliable (low volume: events, not frames). Round-trip time is
