@@ -69,10 +69,11 @@ export class Player {
     this.tellG.L = this.tellG.R = 0;
   }
 
-  // Menu/intro framing: the rig glides to a free camera spot and the gloves hide.
-  setMenu(pos, look, snap = false) {
+  // Menu/intro framing: the rig glides to a free camera spot and the gloves hide (unless a camera
+  // move that ends in your eyes asks for them).
+  setMenu(pos, look, snap = false, gloves = !pos) {
     this.menu = pos ? { pos: pos.clone(), look: look.clone() } : null;
-    for (const k in this.gloves) { this.gloves[k].grp.visible = this.gloves[k].arm.visible = !pos; }
+    for (const k in this.gloves) { this.gloves[k].grp.visible = this.gloves[k].arm.visible = gloves; }
     if (pos && snap) { this.rig.position.copy(pos); this.look.copy(look); }
   }
 

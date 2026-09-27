@@ -15,7 +15,7 @@ import { ui, makeCard, fmtTime } from './ui.js';
 import { audio, AUDIO_DEBUG } from './audio.js';
 if (AUDIO_DEBUG) import('./audiodebug.js');
 import { setRim } from './materials.js';
-import { clamp, pick } from './spring.js';
+import { clamp, lerp, pick } from './spring.js';
 import { PERKS, shiftNumber, modifierFor, perkUnlocked, newRun, recordFight, squares, perkOf, cleared, shareLine } from './shift.js';
 
 const $ = (s) => document.querySelector(s);
@@ -117,7 +117,7 @@ let run = null;           // Daily Shift in progress, or null on the ladder
 let perkPick = null;
 
 function setFighter(i) {
-  if (fighter && fighter.data === ROSTER[i]) return;
+  if (fighter && fighter.data === ROSTER[i] && !fighter.corner) return;
   if (fighter) { scene.remove(fighter.root); fighter.dispose(); }
   fighter = new Fighter(ROSTER[i]);
   fighter.keepOut = camera;
@@ -199,6 +199,7 @@ function toTitle() {
   audio.setCrowd(0.3);
 }
 function tauntPoseOf(d) { return { phone: 'phone', sip: 'sip', flex: 'flex', invoice: 'invoice', nap: 'nap', cash: 'cash' }[d.taunt] || 'flex'; }
+function tauntPropOf(d) { return { phone: 'phone', sip: 'mug', invoice: 'paper', cash: 'cash' }[d.taunt] || null; }
 
 // ---------- elevator ----------
 function toElevator(sel = Math.min(save.unlocked, ROSTER.length - 1)) {
@@ -258,7 +259,7 @@ function selectFloor(i) {
   fighter.reset();
   fighter.setPose(tauntPoseOf(d), 80, 10);
   fighter.setExpr('taunt');
-  fighter.showProp({ phone: 'phone', sip: 'mug', invoice: 'paper', cash: 'cash' }[d.taunt] || null);
+  fighter.showProp(tauntPropOf(d));
   // wide: the boss stands to the right of the dossier; narrow: the dossier sits on top, so frame the boss low
   const wide = window.innerWidth > 760 && window.innerWidth > window.innerHeight;
   if (wide) player.setMenu(new THREE.Vector3(-1.05, 1.55, 0.95), new THREE.Vector3(-0.55, 1.35, -0.6));
@@ -582,9 +583,11 @@ async function copyShift(b) {
 }
 
 // ---------- 1v1 versus (VERSUS.md) ----------
-const VS_VERSION = 1;
+const VS_VERSION = 2;
 let vs = null;        // the room: { code, creator, net, peer, host, r, me, them, meReady, themReady, again, local, lag }
 let vsMenu = false;   // the pause menu is open over a live versus fight
+// Kyle from the start; everyone else once you beat them on their floor in the story, at any grade
+const vsOpen = (i) => i === 0 || !!save.best[ROSTER[i].id];
 const MOVE_NAMES = { jabL: 'Quick jab', hookL: 'Left hook', upperL: 'Left uppercut', upperR: 'Right uppercut', smash: 'THE SMASH',
   takeover: 'HOSTILE TAKEOVER', pivot: 'THE PIVOT' };
 const moveName = (m) => (m.id === 'throwR' ? `Throws ${m.prop === 'paper' ? 'a write-up' : m.prop === 'card' ? 'business cards' : m.prop}` : MOVE_NAMES[m.id] || m.id);
@@ -602,7 +605,8 @@ function startVersus(code, creator) {
   run = null; fight = null; paused = false; overlay('pause', false);
   document.body.classList.remove('in-run');
   const q = new URLSearchParams(location.search);
-  vs = { code, creator, net: null, gen: 0, peer: false, gotHi: false, host: false, r: Math.random(), me: save.vsPick ?? 0, them: null,
+  const saved = save.vsPick ?? 0;
+  vs = { code, creator, net: null, gen: 0, peer: false, gotHi: false, host: false, r: Math.random(), me: vsOpen(saved) ? saved : 0, them: null,
     meReady: false, themReady: false, again: { me: false, them: false }, local: q.get('net') === 'local', lag: +q.get('lag') || 0 };
   history.replaceState(null, '', vsLink());
   toVsLobby();
@@ -726,41 +730,72 @@ function toVsSelect() {
   vs.again = { me: false, them: false };
   buildTiles();
   show('vsSelect');
-  // POV: you stand where you will fight, gloves up
   player.reset();
-  player.setMenu(null);
-  setFighter(vs.them ?? vs.me);
-  applyTheme(ROSTER[vs.them ?? vs.me]);
-  fighter.reset();
+  vsSelectCam(true);
   vsBrowse(vs.me, true);
   audio.playMusic('elevator');
+}
+
+// Your pick stands in your corner, where you will fight from, facing where your opponent will be.
+// The camera looks at them from the front; startVsIntro swings it round into their eyes.
+const SELF_Z = CAM_BASE.z + 0.1;
+function showSelf(d) {
+  if (fighter?.corner && fighter.data === d) return false;
+  if (fighter) { scene.remove(fighter.root); fighter.dispose(); }
+  fighter = new Fighter(d);
+  fighter.corner = true;
+  fighter.root.position.z = SELF_Z;
+  fighter.root.rotation.y = Math.PI;
+  scene.add(fighter.root);
+  return true;
+}
+// wide: your fighter stands right of the card; narrow: the card sits on top, so frame them low.
+// Either way the camera stays in front of your opponent's spot, where they appear when the intro starts.
+function vsSelectCam(snap) {
+  const wide = window.innerWidth > 760 && window.innerWidth > window.innerHeight;
+  if (wide) player.setMenu(new THREE.Vector3(1.05, 1.55, SELF_Z - 1.55), new THREE.Vector3(0.55, 1.35, SELF_Z), snap);
+  else player.setMenu(new THREE.Vector3(0.35, 1.35, SELF_Z - 1.05), new THREE.Vector3(0, 1.75, SELF_Z), snap);
 }
 
 function buildTiles() {
   const wrap = $('#selGrid');
   wrap.innerHTML = '';
   ROSTER.forEach((d, i) => {
+    const open = vsOpen(i);
     const b = document.createElement('button');
-    b.className = 'tile'; b.dataset.act = 'vsTile'; b.dataset.i = i;
+    b.className = 'tile' + (open ? '' : ' shut'); b.dataset.i = i;
+    if (open) b.dataset.act = 'vsTile';
+    else {
+      b.title = `Beat ${d.name.split(' ')[0]} on floor ${d.floor} in the story to unlock`;
+      b.addEventListener('click', () => { audio.uiBack(); b.animate([{ translate: '-4px' }, { translate: '4px' }, { translate: '0' }], { duration: 160 }); });
+    }
     const c = document.createElement('canvas');
     c.width = TILE_W; c.height = TILE_H;
-    paintTile(c, d, i);
+    paintTile(c, d, i, open);
     const name = document.createElement('span');
-    name.textContent = d.name.split(' ')[0];
+    name.textContent = open ? d.name.split(' ')[0] : `🔒 ${d.floor}`;
     const them = document.createElement('em');
     them.className = 'them'; them.textContent = 'THEM';
     b.append(c, name, them);
     wrap.appendChild(b);
   });
+  $('#selHint').classList.toggle('hidden', ROSTER.every((d, i) => vsOpen(i)));
 }
 
-// A mugshot of the real fighter over their floor's colours.
-function paintTile(c, d, i) {
+// A mugshot of the real fighter over their floor's colours; a black silhouette until unlocked.
+function paintTile(c, d, i, open) {
   const g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, c.height);
   grad.addColorStop(0, d.theme.a); grad.addColorStop(1, d.theme.bg);
   g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
-  g.drawImage(portraits()[i], 0, 0);
+  if (open) { g.drawImage(portraits()[i], 0, 0); return; }
+  const s = document.createElement('canvas');
+  s.width = c.width; s.height = c.height;
+  const sg = s.getContext('2d');
+  sg.drawImage(portraits()[i], 0, 0);
+  sg.globalCompositeOperation = 'source-in';
+  sg.fillStyle = '#07050a'; sg.fillRect(0, 0, s.width, s.height);
+  g.drawImage(s, 0, 0);
 }
 
 // Each fighter's head, rendered once and kept. It uses a throwaway renderer because the main canvas
@@ -802,13 +837,18 @@ function portraits() {
 }
 
 function vsBrowse(i, quiet) {
-  if (!vs || vs.meReady) return;
+  if (!vs || vs.meReady || !vsOpen(i)) return;
   vs.me = i;
   save.vsPick = i; persist();
   vs.net?.send({ k: 'sel', c: i, ready: false });
-  player.setGloveColor(ROSTER[i].look.gloves);
   if (!quiet) audio.uiMove();
   renderSelect();
+}
+// arrow keys skip fighters you haven't unlocked (Kyle always is, so this ends)
+function vsStep(dir) {
+  let i = vs.me;
+  do i = (i + dir + ROSTER.length) % ROSTER.length; while (!vsOpen(i));
+  vsBrowse(i);
 }
 
 function vsLock(on) {
@@ -848,13 +888,11 @@ function renderSelect() {
   const lock = $('#selLock');
   lock.textContent = vs.meReady ? (vs.themReady ? 'MATCH SET' : 'LOCKED ✓ (UNLOCK)') : 'LOCK IN';
   lock.classList.toggle('locked', vs.meReady);
-  // the ring shows who your opponent is looking at: that's who you'll face
-  if (vs.them !== null) {
-    const o = ROSTER[vs.them];
-    if (fighter.data !== o) { setFighter(vs.them); applyTheme(o); fighter.reset(); }
-    fighter.setPose(vs.themReady ? tauntPoseOf(o) : 'guard', 120, 14);
-    fighter.setExpr(vs.themReady ? 'taunt' : 'idle');
-  }
+  // the ring is yours: your pick on your floor, showing off once locked in
+  if (showSelf(d)) applyTheme(d);
+  fighter.setPose(vs.meReady ? tauntPoseOf(d) : 'guard', 120, 14);
+  fighter.setExpr(vs.meReady ? 'taunt' : 'idle');
+  fighter.showProp(vs.meReady ? tauntPropOf(d) : null);
 }
 
 function startVsIntro() {
@@ -865,6 +903,11 @@ function startVsIntro() {
   document.body.classList.add('vs');
   audio.uiSelect();
   audio.punchClock();
+  // a rematch skips the select screen, so your fighter steps back into your corner first
+  showSelf(me);
+  vsSelectCam(true);
+  vsSelf = fighter; fighter = null;
+  vsSelf.setPose('guard', 120, 14); vsSelf.setExpr('angry'); vsSelf.showProp(null);
   setFighter(vs.them);
   applyTheme(them);
   fighter.reset();
@@ -893,15 +936,44 @@ function startVsIntro() {
   $('#iStats').innerHTML = Object.entries(VS[them.id].bars).map(([k, n]) => `<dt>${k}</dt><dd>${'■'.repeat(n)}${'□'.repeat(5 - n)}</dd>`).join('');
   $('#iName').style.fontSize = them.name.length > 12 ? 'clamp(44px, 8vw, 110px)' : '';
   show('intro');
-  player.setMenu(new THREE.Vector3(0.75, 1.45, 0.55), new THREE.Vector3(0, 1.5, -0.6), true);
-  setTimeout(() => player.menu && player.setMenu(new THREE.Vector3(0.35, 1.55, 0.95), new THREE.Vector3(0, 1.5, -0.6)), 30);
+  startSwing();
   audio.stopMusic(0.4);
   audio.setCrowd(0.5);
   audio.cheer(0.5);
   audio.say(`${me.name}. Versus. ${them.name}.`, { rate: 0.95, pitch: 0.6 });
 }
 
+// The intro camera circles round your fighter's right side and settles in their eyes, facing your
+// opponent. The body goes when the lens reaches the back of its head, and your gloves come up.
+const SWING_WAIT = 0.35, SWING_DUR = 2.5;
+let vsSelf = null;   // your fighter's body, only while the intro camera swings round it
+let swing = null;
+const swingPos = new THREE.Vector3(), swingLook = new THREE.Vector3(), selfHead = new THREE.Vector3();
+function startSwing() {
+  // polar coordinates around the fight camera's spot: angle 0 faces the opponent, PI is behind you
+  const p = player.rig.position;
+  swing = { t: 0, look: player.look.clone(), r0: Math.hypot(p.x, p.z - CAM_BASE.z), th0: Math.atan2(p.x, CAM_BASE.z - p.z), h0: p.y };
+}
+function updateSwing(dt) {
+  swing.t += dt;
+  const u = clamp((swing.t - SWING_WAIT) / SWING_DUR, 0, 1);
+  const e = u * u * u * (u * (u * 6 - 15) + 10);
+  // the radius holds early and closes late, so the lens reaches the body from behind, not the side
+  const th = lerp(swing.th0, Math.PI, e), r = swing.r0 * (1 - e * e);
+  swingPos.set(r * Math.sin(th), lerp(swing.h0, CAM_BASE.y, e) + 0.22 * Math.sin(Math.PI * e), CAM_BASE.z - r * Math.cos(th));
+  if (vsSelf) vsSelf.headWorld(selfHead);
+  swingLook.copy(swing.look).lerp(selfHead, THREE.MathUtils.smoothstep(e, 0, 0.35)).lerp(LOOK_AT, THREE.MathUtils.smoothstep(e, 0.45, 0.95));
+  if (vsSelf && r < 0.42) { dropSelf(); player.g.snapAll({ ly: -0.95, ry: -0.95 }); player.guard(); }
+  player.setMenu(swingPos, swingLook, true, !vsSelf);
+  if (u >= 1) swing = null;
+}
+function dropSelf() {
+  if (!vsSelf) return;
+  scene.remove(vsSelf.root); vsSelf.dispose(); vsSelf = null;
+}
+
 function beginVsFight() {
+  swing = null; dropSelf();
   const d = ROSTER[vs.them];
   audio.playMusic('fight', { bpm: d.music.bpm, root: d.music.root, mood: d.music.mood, intensity: 0.3 });
   input.setHoldMode(true);
@@ -909,6 +981,8 @@ function beginVsFight() {
 }
 
 function toVsEnd(r) {
+  // a forfeit can end the match before the intro camera has finished
+  swing = null; dropSelf();
   screen = 'vsEnd';
   vsMenu = false; overlay('pause', false);
   input.setHoldMode(false);
@@ -1190,8 +1264,8 @@ input.on((action, down, src) => {
       else if (action === 'confirm' && vs.creator) vsSend();
       break;
     case 'vsSelect':
-      if (action === 'left') vsBrowse((vs.me + ROSTER.length - 1) % ROSTER.length);
-      else if (action === 'right') vsBrowse((vs.me + 1) % ROSTER.length);
+      if (action === 'left') vsStep(-1);
+      else if (action === 'right') vsStep(1);
       else if (action === 'confirm' || action === 'jabL' || action === 'jabR') vsLock(true);
       else if (action === 'pause') { if (vs.meReady) vsLock(false); else vsLeave(); }
       break;
@@ -1253,6 +1327,8 @@ function step() {
     }
   }
 
+  if (swing) updateSwing(realDt);
+  if (vsSelf) vsSelf.update(realDt, t, null, realDt);
   if (fighter) {
     fighter.update(dt, t, (s) => { arena.ropeHit(s); audio.knockdown(); player.addTrauma(0.3); }, realDt);
     fighter.headWorld(headTmp);

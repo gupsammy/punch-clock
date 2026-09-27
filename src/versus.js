@@ -30,9 +30,9 @@ const SPECIAL_NAMES = { pivot: 'THE PIVOT', takeover: 'HOSTILE TAKEOVER' };
 const OPEN = ['recover', 'stun', 'hurt', 'taunt'];
 // Traits (VERSUS.md "Characters"): each fighter bends one rule their way and one against them,
 // the way they do on their floor. Everything below keyed by roster id lives in this file.
-const PHONE_AFTER = 3, NAP_EVERY = [18, 28], NAP_DUR = 2.6, NAP_WAKE_TAPS = 5, FURY_DUR = 5;
+const PHONE_AFTER = 3, NAP_EVERY = [18, 28], NAP_DUR = 2.6, FURY_DUR = 5;
 const TAUNT = { phone: { pose: 'phone', prop: 'phone', dur: 1.2, text: 'CHECKING PHONE…' }, sip: { pose: 'sip', prop: 'mug', dur: 1.2, text: 'SIP BREAK' },
-  flex: { pose: 'flex', prop: null, dur: 0.8, text: 'FLEXING' }, nap: { pose: 'nap', prop: null, dur: NAP_DUR, text: 'ZZZ… MASH TO WAKE UP' } };
+  flex: { pose: 'flex', prop: null, dur: 0.8, text: 'FLEXING' }, nap: { pose: 'nap', prop: null, dur: NAP_DUR, text: 'ZZZ… A HIT WAKES YOU FURIOUS' } };
 
 export class Versus {
   // me, them: ROSTER entries. net: from net.js. host: owns the round clock.
@@ -70,11 +70,18 @@ export class Versus {
     const p = this.p;
     return this.vme.power * (this.desperate() ? 1.35 : 1) * (p.fury > 0 ? 1.25 : 1) * (p.jacket ? 1.15 : 1);
   }
-  setState(s) { this.p.state = s; this.p.st = 0; this.dirty = true; }
+  setState(s) {
+    const p = this.p;
+    // a taunt ends however it ends (timer, hit, knockdown), and the nap's hint goes with it
+    if (p.state === 'taunt' && s !== 'taunt') { if (p.tk === 'nap') this.ctx.ui.hint(null); p.tk = null; }
+    p.state = s; p.st = 0; this.dirty = true;
+  }
   sendState() {
     const p = this.p;
+    // a punch goes out as two states, glove out then glove back, so back-to-back punches each show
+    const s = p.state === 'punch' && p.phaseP === 'recover' ? 'punchBack' : p.state;
     this.net.send({ k: 'st', hp: Math.round(p.hp * 10) / 10, max: p.max, kd: p.kd, meter: Math.round(p.meter), guard: Math.round(p.guard),
-      s: p.state, dir: p.dodgeDir, side: p.side, tk: p.tk, gm: this.gmax, fu: p.fury > 0, jk: p.jacket });
+      s, dir: p.dodgeDir, side: p.side, tk: p.tk, gm: this.gmax, fu: p.fury > 0, jk: p.jacket });
     this.dirty = this.softDirty = false;
     this.sentAt = this.real;
   }
@@ -148,6 +155,7 @@ export class Versus {
         break;
       case 'dodge': fighter.setPose(m.dir === 'duck' ? 'duck' : m.dir === 'left' ? 'slipR' : 'slipL', 420, 30); break;
       case 'punch': fighter.strikePose('jab' + flip(m.side), 'jab'); break;
+      case 'punchBack': fighter.setPose('guard', 400, 28); break;
       case 'recover': fighter.setPose('open', 160, 14); fighter.setExpr('shock', 0.5); break;
       case 'stun': fighter.setPose('dizzy', 160, 12); fighter.setExpr('dizzy'); fx.dizzy(true); break;
       case 'hurt': fighter.setPose('hurtHead', 200, 14); break;
@@ -266,12 +274,6 @@ export class Versus {
     }
     if (this.phase !== 'fight') return;
     p.idleT = 0;
-    if (p.state === 'taunt' && p.tk === 'nap' && down && (action === 'jabL' || action === 'jabR' || action === 'haymaker')) {
-      p.taps++;
-      this.ctx.player.cam.kick('y', 0.4);
-      if (p.taps >= NAP_WAKE_TAPS) { this.ctx.ui.popup('AWAKE'); this.closeOpen(); }
-      return;
-    }
     if (action === 'jabL' || action === 'jabR') {
       const side = action === 'jabL' ? 'L' : 'R';
       if (down) { p.press[side] = { t: this.real, fired: false }; return; }
@@ -415,8 +417,6 @@ export class Versus {
   closeOpen() {
     const p = this.p;
     p.openT = 0;
-    if (p.tk === 'nap') this.ctx.ui.hint(null);
-    p.tk = null;
     this.setState('idle');
     this.ctx.player.center();
     if (p.guardBroken) { p.guardBroken = false; p.guard = this.gmax; }
@@ -428,15 +428,12 @@ export class Versus {
     this.cancelMine();
     this.open('taunt', tt.dur);
     p.tk = kind;
-    p.taps = 0;
     if (kind === 'nap') { this.ctx.ui.hint(tt.text); this.ctx.audio.snore(); } else this.ctx.ui.popup(tt.text);
   }
 
   wakeFurious() {
     const p = this.p;
     const { ui, audio, player } = this.ctx;
-    p.tk = null;
-    ui.hint(null);
     p.meter = 100; p.fury = FURY_DUR;
     this.open('stun', 0.35);
     ui.callout('WHO DARES.', { size: 'l', color: '#ff2e55', dur: 0.9 });
@@ -494,6 +491,7 @@ export class Versus {
         const P = VS_PUNCH[this.vme.punch][p.side];
         if (p.phaseP === 'startup' && p.st >= P.startup) {
           p.phaseP = 'recover'; p.st = 0;
+          this.dirty = true;
           this.resolvePunch(p.side);
           player.guard();
         } else if (p.phaseP === 'recover' && p.st >= P.recover) this.setState('idle');
@@ -758,8 +756,9 @@ export class Versus {
     this.s.dmgTaken += dmg;
     this.gainMeter(dmg * 0.5);
     p.combo = 0;
+    const napping = p.state === 'taunt' && p.tk === 'nap';
     this.cancelMine();
-    this.setState('hurt');
+    if (napping) this.wakeFurious(); else this.setState('hurt');
     const strength = clamp(dmg / 25, 0.3, 1);
     player.hurt(strength, a.hand);
     post.pulse('hurt', 0.5 + strength * 0.5);

@@ -558,6 +558,9 @@ body.touch .tap { display: inline; }
 .tile.me.locked { box-shadow: inset 0 0 0 3px #3dff7a, 0 0 18px #3dff7a; }
 .tile .them { position: absolute; top: -9px; right: -6px; background: var(--b); color: #fff; font-size: 9px; padding: 2px 5px; display: none; }
 .tile.them .them { display: block; }
+.tile.shut { cursor: not-allowed; }
+.tile.shut span { color: rgba(255,255,255,.55); }
+.sel-hint { flex-basis: 100%; margin: 0 0 -8px; font-size: 11px; letter-spacing: .08em; color: rgba(255,255,255,.7); }
 .sel-actions { display: flex; gap: 14px; align-items: center; }
 #selLock.locked { background: #3dff7a; }
 

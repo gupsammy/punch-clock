@@ -90,11 +90,15 @@ and a **perk** and a **flaw** taken from their ladder gimmick. Numbers and card 
 | Brenda | 100 | PAPER TRAIL: 4 blocks in a row → automatic fast counter | SIP BREAK: after her special lands, open 1.2 s |
 | Chad | 110 | GRINDSET: guard 130 | FLEX: after any attack lands, open 0.8 s |
 | Derek | 100 | BILLABLE HOURS: each attack landed takes 20 of your meter; feints until 85 % of a wind-up | NO SKIN IN THE GAME: any wind-up, specials too, can be interrupted after 0.04 s |
-| Margaret | 95 | WHO DARES: woken by a hit → FURIOUS: full meter, +25 % power for 5 s | NAPS: every 18–28 s, the next time she is idle, asleep 2.6 s (5 taps wake her) |
+| Margaret | 95 | WHO DARES: woken by any hit (punch or attack) → FURIOUS: full meter, +25 % power for 5 s | NAPS: every 18–28 s, the next time she is idle, asleep 2.6 s. Her own buttons do nothing; only a hit or the timer wakes her |
 | Roland | 105 | GOLDEN PARACHUTE: first knockdown, straight back up at 50 %, jacket off, +15 % power | SHAREHOLDERS: guard 70 |
 
 Buffs that change damage (Kyle, Margaret, Roland) travel with each attack (`pw`), since the defender
 computes the damage.
+
+**Unlocks**: Kyle is open from the start. Every other fighter opens once you beat them on their floor in
+the story, at any grade (`save.best[id]`; Daily Shift wins don't count). Locked tiles show a black
+silhouette and the floor to beat; arrows skip them. Each player picks from their own unlocks.
 
 | | Hold L | Hold R | Special | Punches |
 |---|---|---|---|---|
@@ -105,17 +109,26 @@ computes the damage.
 | Margaret | hook | smash | BACK IN MY DAY (jab, jab, hook, hook, smash) | heavy |
 | Roland | HOSTILE TAKEOVER | cash throw | LAYOFFS (lights out on the victim's screen) | heavy |
 
-## Select screen (POV)
-The camera sits where you fight. The fighter your friend is hovering stands in the ring in front of
-you and swaps live as they browse; your gloves take your pick's glove colour. Your card (name, bars,
-good at / watch out, moves) sits on the left; six face tiles along the bottom (each fighter's real
-3D head, rendered once on a throwaway renderer while the lobby waits, then cached). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap
-a tile, tap LOCK IN. The ring wears your opponent's floor: you fight on their turf.
+## Select screen
+Your pick stands in your corner (where your camera will be in the fight, facing your opponent's spot)
+on your pick's floor, and swaps as you browse; locked in, they strike their taunt pose. The camera
+faces them from in front, right of your card when wide, below it when narrow, and always in front of
+the opponent's spot. Your opponent's pick shows only as the THEM badge and the line top right.
+Your card (name, bars, good at / watch out, moves) sits on the left; six face tiles along the bottom
+(each fighter's real 3D head, rendered once on a throwaway renderer while the lobby waits, then
+cached). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap a tile, tap LOCK IN.
+
+**Intro swing**: when both lock in (or accept a rematch), the ring switches to your opponent's floor
+under the wipe (you fight on their turf) and they appear taunting. Over 2.5 s the camera circles your
+fighter's right side and closes in behind their head; when it gets within 0.42 m of your spot the
+body is removed and your gloves come up, and the camera ends exactly on the fight camera spot, so the
+fight starts without a cut.
 
 ## Messages
 `hi{v, r}` · `sel{c, ready}` · `go{}` · `st{hp, max, kd, meter, guard, gm, s, dir, side, tk, fu, jk}` ·
 `atk{n, id, wind, prop, fl, pw}` · `cx{n}` · `res{n, r, dmg}` · `pun{side, kind, dmg, cap}` · `count{n}` · `ko{}` ·
-`end{win}` · `again{}` · `pick{}`. The higher random `r` in `hi` is the host. Version mismatch on `hi` → lobby shows "UPDATE: RELOAD THE PAGE".
+`end{win}` · `again{}` · `pick{}`. In `st`, a punch sends two states, `punch` (glove out) then `punchBack`
+(recovering), so back-to-back punches each show on the other screen. The higher random `r` in `hi` is the host. Version mismatch on `hi` → lobby shows "UPDATE: RELOAD THE PAGE".
 
 ## Code
 ```
