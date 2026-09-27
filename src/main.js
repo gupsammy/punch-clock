@@ -11,7 +11,7 @@ import { createInput } from './input.js';
 import { Fight } from './fight.js';
 import { Versus } from './versus.js';
 import { connect, newCode, cleanCode } from './net.js';
-import { ui, makeCard, fmtTime } from './ui.js';
+import { ui, makeCard, fmtTime, SITE } from './ui.js';
 import { audio, AUDIO_DEBUG } from './audio.js';
 if (AUDIO_DEBUG) import('./audiodebug.js');
 import { setRim } from './materials.js';
@@ -1122,6 +1122,9 @@ async function openShare() {
   $('#shareImg').src = url;
   $('#shareImg').dataset.url = url;
   clipBlob = null;
+  // files are ready before the tap: an await between the tap and share() can cost the gesture on iOS
+  shareFiles = {};
+  fetch(url).then((res) => res.blob()).then((b) => { if (lastResult === r) shareFiles.card = new File([b], 'punch-clock.png', { type: 'image/png' }); });
   $('#shareTabs').classList.add('hidden');
   setShareTab('card');
   overlay('share', true);
@@ -1130,6 +1133,7 @@ async function openShare() {
     const blob = await Promise.race([r.clip, new Promise((res) => setTimeout(() => res(null), 5000))]);
     if (blob && lastResult === r && !$('#share').classList.contains('hidden')) {
       clipBlob = blob;
+      shareFiles.clip = new File([blob], clipName(), { type: blob.type.split(';')[0] });
       const v = $('#shareVid');
       if (v.src) URL.revokeObjectURL(v.src);
       v.src = URL.createObjectURL(blob);
@@ -1140,7 +1144,7 @@ async function openShare() {
   $('[data-act="post"]').textContent = canShare ? 'SHARE' : 'POST ON X';
 }
 
-let clipBlob = null, shareTab = 'card';
+let clipBlob = null, shareTab = 'card', shareFiles = {};
 const canShare = isCoarse && !!navigator.canShare;
 function setShareTab(tab) {
   shareTab = tab;
@@ -1150,7 +1154,7 @@ function setShareTab(tab) {
   const v = $('#shareVid');
   if (tab === 'clip') { v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
   $('#saveBtn').textContent = tab === 'clip' ? 'SAVE CLIP' : 'SAVE IMAGE';
-  $('#shareNote').textContent = canShare ? `Tap SHARE to send the ${tab} straight to X or anywhere else.` : `Save the ${tab}, then attach it to your post.`;
+  $('#shareNote').textContent = canShare ? `Tap SHARE to send the ${tab} to X or anywhere else.` : `POST ON X saves the ${tab} and opens X. Drag the file into your post.`;
 }
 const clipName = () => `punch-clock.${clip.ext}`;
 
@@ -1163,21 +1167,21 @@ function shareText() {
   return `I knocked out ${d.name}, ${d.title}, in ${fmtTime(r.time)} — grade ${r.grade.letter}: "${r.grade.label}" 🥊 #PUNCHCLOCK`;
 }
 
-async function postShare() {
+// Phones only use the share sheet: it reaches the installed X app, where a web link opens logged-out x.com.
+// Desktops save the file, then open X's composer, which cannot take media.
+function postShare() {
   const text = shareText();
-  const link = location.protocol.startsWith('http') && !/localhost|127\.0\.0\.1/.test(location.hostname) ? location.href.split('#')[0] : '';
-  const dataUrl = $('#shareImg').dataset.url;
-  if (canShare && dataUrl) {
-    try {
-      const isClip = shareTab === 'clip' && clipBlob;
-      const blob = isClip ? clipBlob : await (await fetch(dataUrl)).blob();
-      const file = isClip ? new File([blob], clipName(), { type: blob.type }) : new File([blob], 'punch-clock.png', { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: link ? `${text} ${link}` : text }); return; }
-    } catch { /* fall through to the intent link */ }
+  const link = `https://${SITE}/`;
+  if (canShare) {
+    const file = shareFiles[shareTab === 'clip' && clipBlob ? 'clip' : 'card'];
+    const data = file && navigator.canShare({ files: [file] }) ? { files: [file], text: `${text} ${link}` } : { text, url: link };
+    navigator.share(data).catch((e) => {
+      if (e.name !== 'AbortError') $('#shareNote').textContent = `Couldn't open sharing. Save the ${shareTab} and post it yourself.`;
+    });
+    return;
   }
-  const q = new URLSearchParams({ text });
-  if (link) q.set('url', link);
-  window.open(`https://x.com/intent/post?${q}`, '_blank', 'noopener');
+  saveImage();
+  window.open(`https://x.com/intent/post?${new URLSearchParams({ text, url: link })}`, '_blank', 'noopener');
 }
 
 function saveImage() {

@@ -1,8 +1,9 @@
-import { fmtTime } from './ui.js';
+import { fmtTime, SITE } from './ui.js';
 
 // Rolling fight recorder (DESIGN.md "Clips"). Two recorders restart every CYCLE seconds, CYCLE/2 apart,
 // so the older one always holds the last 4-8 s. Timing runs off update(dt), so a paused game pauses the clip.
-const CYCLE = 8, TAIL = 3.6, CARD = 1;
+// The end card holds long enough to read the play link.
+const CYCLE = 8, CARD = 2.5, TAIL = 2.6 + CARD;
 const TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const DISP = '"Anton", Impact, sans-serif', MONO = '"JetBrains Mono", monospace';
 
@@ -71,7 +72,9 @@ export function createClip({ audio, maxSide }) {
     text(`FLOOR ${d.floor}`, W - pad, H - pad, `${u * 2}px ${DISP}`, t.a, 'right');
   }
 
-  function endCard(m, k) {
+  // e: seconds since the card began
+  function endCard(m, e) {
+    const k = Math.min(1, e);
     const W = cv.width, H = cv.height, u = Math.min(W, H) / 60, d = m.fight.d, t = d.theme;
     g.fillStyle = `rgba(7,5,10,${0.55 + 0.4 * k})`; g.fillRect(0, 0, W, H);
     g.save(); g.translate(0, H * 0.7); g.rotate(-0.12);
@@ -86,8 +89,16 @@ export function createClip({ audio, maxSide }) {
     g.restore();
     text(who, cx, H * 0.42 + u * 5, `${u * 2.4}px ${DISP}`, '#ffd23f', 'center');
     text(fmtTime(m.time), cx, H * 0.42 + u * 10, `800 ${u * 4}px ${MONO}`, '#ff5a3d', 'center');
-    text('PUNCH CLOCK', cx, H - u * 7, `${u * 3.4}px ${DISP}`, t.a, 'center');
-    text('#PUNCHCLOCK', cx, H - u * 3.6, `700 ${u * 1.8}px ${MONO}`, 'rgba(255,255,255,.75)', 'center');
+    // the call to action fades in once the result has landed
+    g.save(); g.globalAlpha = Math.max(0, Math.min(1, (e - 0.5) * 3));
+    text('PUNCH CLOCK', cx, H - u * 12.4, `${u * 3.4}px ${DISP}`, t.a, 'center');
+    text('PLAY FREE · NO DOWNLOAD', cx, H - u * 8.8, `${u * 2}px ${DISP}`, '#fff', 'center');
+    const fs = Math.min(u * 2.6, W / 20);
+    g.font = `800 ${fs}px ${MONO}`;
+    const bw = g.measureText(SITE).width + fs * 1.6, bh = fs * 2;
+    g.fillStyle = t.a; g.fillRect(cx - bw / 2, H - u * 3 - bh, bw, bh);
+    text(SITE, cx, H - u * 3 - bh / 2 + fs * 0.36, `800 ${fs}px ${MONO}`, '#000', 'center');
+    g.restore();
   }
 
   // ---------- marks ----------
@@ -179,7 +190,7 @@ export function createClip({ audio, maxSide }) {
       if (fight) overlay();
       for (const m of live) {
         m.left -= dt;
-        if (m.left < CARD && m.keep) endCard(m, 1 - m.left / CARD);
+        if (m.left < CARD && m.keep) endCard(m, CARD - m.left);
         if (m.left <= 0) finish(m);
       }
     },

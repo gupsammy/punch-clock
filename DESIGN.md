@@ -134,12 +134,13 @@ modifier on the same day (chosen from N, not random).
 ## Clips
 Every fight records the canvas (with a drawn broadcast overlay: HP bars, names, clock, latest callout,
 boss quote, #PUNCHCLOCK) plus game audio. Two recorders restart every 8 s, 4 s apart, so one always
-holds the last 4–8 s. A KO or a knockdown marks the older one; it keeps rolling 3.6 s, then stops.
-A KO or firing keeps the clip; getting back up drops it. Only a kept clip gets the 1 s end card
-(K.O.! or FIRED, boss, time): every recorder draws from one canvas, so a card for an undecided
+holds the last 4–8 s. A KO or a knockdown marks the older one; it keeps rolling 5.1 s, then stops.
+A KO or firing keeps the clip; getting back up drops it. Only a kept clip gets the 2.5 s end card
+(K.O.! or FIRED, boss, time, then the play link as a button): every recorder draws from one canvas, so a card for an undecided
 knockdown would leak into the next clip. Clip timing runs on game frames, so pausing pauses it.
-Share screen opens on the clip with a CLIP/CARD toggle (native share of the file where supported,
-download otherwise). mp4 where the browser records it, webm otherwise. Longest side 1280 px, 720 on touch.
+Share screen opens on the clip with a CLIP/CARD toggle. Phones only use the share sheet (it reaches
+the installed X app; cancelling does nothing); desktops save the file, then open X's composer.
+Cards and clips carry the play link. mp4 where the browser records it, webm otherwise. Longest side 1280 px, 720 on touch.
 
 ## Phones and tablets
 - Touch: tap left/right half to punch, swipe to dodge/duck, swipe up for OVERTIME, ❚❚ button to pause.

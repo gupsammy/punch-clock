@@ -16,6 +16,9 @@ const els = {
   banner: $('#banner'), count: $('#count'), mash: $('#mash'), hint: $('#hint'), splat: $('#splat'),
 };
 
+// where every card and clip sends people
+export const SITE = 'punch-clock-game.vercel.app';
+
 export const fmtTime = (t) => {
   const m = Math.floor(t / 60), s = Math.floor(t % 60), c = Math.floor((t * 100) % 100);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
@@ -265,12 +268,20 @@ export function makeCard({ snapshot, opp, time, grade, score, stats, win, theme,
         g.restore();
         g.textAlign = 'left';
       }
-      g.font = '700 18px "JetBrains Mono", monospace'; g.fillStyle = 'rgba(255,255,255,.55)';
-      g.fillText('#PUNCHCLOCK', 58, H - 36);
+      cardFooter(g, H, theme);
       resolve(c.toDataURL('image/png'));
     };
     if (snapshot) { const img = new Image(); img.onload = () => draw(img); img.onerror = () => draw(null); img.src = snapshot; } else draw(null);
   });
+}
+
+function cardFooter(g, H, theme) {
+  g.font = '700 18px "JetBrains Mono", monospace';
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  const lead = '#PUNCHCLOCK · PLAY FREE AT ';
+  g.fillText(lead, 58, H - 36);
+  g.fillStyle = theme.a;
+  g.fillText(SITE, 58 + g.measureText(lead).width, H - 36);
 }
 
 // Daily Shift card: the run's squares are the headline, drawn as tiles so they read at thumbnail size
@@ -299,6 +310,5 @@ function drawShift(g, run, disp, theme) {
   g.font = '700 20px "JetBrains Mono", monospace'; g.fillStyle = 'rgba(255,255,255,.85)';
   const perk = run.perkName ? `🧷 ${run.perkName}` : '✅ NO PERKS';
   g.fillText(`${run.mod.name}   ${perk}`, 60, 502);
-  g.font = '700 18px "JetBrains Mono", monospace'; g.fillStyle = 'rgba(255,255,255,.55)';
-  g.fillText('#PUNCHCLOCK', 58, H - 36);
+  cardFooter(g, H, theme);
 }
