@@ -691,12 +691,39 @@ uniform float uIntensity, uTime;
 varying float vAlong;
 varying vec3 vN, vV, vW, vMix;
 void main() {
-  float edge = pow(abs(dot(normalize(vN), normalize(vV))), 2.4);
-  float along = clamp(vAlong, 0.0, 1.0);
+  // pow bases kept off zero: pow(0, y) is exp2(y * log2(0)), and some mobile drivers return NaN for it
+  float edge = pow(max(abs(dot(normalize(vN), normalize(vV))), 1e-4), 2.4);
+  float along = clamp(vAlong, 1e-4, 1.0);
   float fall = (0.2 + 0.8 * pow(along, 1.5)) * smoothstep(0.0, 0.14, along);
   float dust = 0.78 + 0.22 * sin(vW.y * 2.3 + uTime * 0.7 + sin(vW.x * 1.7 + vW.z * 1.3 + uTime * 0.3) * 2.0);
   vec3 c = uColA * vMix.x + uColB * vMix.y + uWhite * vMix.z;
   gl_FragColor = vec4(c * edge * fall * dust * uIntensity, 1.0);
+  ${OUT}
+}`;
+
+// Where a wall beam meets the canvas: an ellipse (the cone cut by the floor), hottest in the middle
+// with a soft edge, in the beam's colour. Without it a beam just stops in mid-air.
+const POOL_VS = /* glsl */ `
+varying vec2 vP;
+void main() {
+  vP = (modelMatrix * vec4(position, 1.0)).xz;
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+}`;
+
+const POOL_FS = /* glsl */ `
+uniform vec4 uPool[2]; // centre xz, unit direction the beam travels across the floor
+uniform vec2 uSize[2]; // radius across, radius along
+uniform vec3 uColA, uColB;
+uniform float uLevel;
+varying vec2 vP;
+float pool(int i) {
+  vec2 d = vP - uPool[i].xy, a = uPool[i].zw;
+  float r = length(vec2(dot(d, vec2(-a.y, a.x)) / uSize[i].x, dot(d, a) / uSize[i].y));
+  return (1.0 - smoothstep(0.6, 1.0, r)) * (0.45 + 0.55 * exp(-r * r * 3.0));
+}
+void main() {
+  float mask = 1.0 - smoothstep(${(RING - 0.12).toFixed(2)}, ${RING.toFixed(2)}, max(abs(vP.x), abs(vP.y)));
+  gl_FragColor = vec4((uColB * pool(0) + uColA * pool(1)) * mask * uLevel, 1.0);
   ${OUT}
 }`;
 
@@ -1187,6 +1214,7 @@ function buildRig(group, U) {
     const mesh = new THREE.Mesh(unit(half, mix), coneMat());
     mesh.frustumCulled = false;
     mesh.userData.src = src;
+    mesh.userData.half = half;
     group.add(mesh);
     return mesh;
   };
@@ -1200,6 +1228,27 @@ function buildRig(group, U) {
     mesh.quaternion.setFromUnitVectors(DOWN, dir.normalize());
     mesh.material.uniforms.uIntensity.value = intensity;
     mesh.visible = intensity > 0.002;
+  };
+  const poolMat = shaderMat({
+    uniforms: {
+      uPool: { value: [new THREE.Vector4(), new THREE.Vector4()] }, uSize: { value: [new THREE.Vector2(), new THREE.Vector2()] },
+      uColA: U.uColA, uColB: U.uColB, uLevel: { value: 0 },
+    },
+    vertexShader: POOL_VS,
+    fragmentShader: POOL_FS,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+  });
+  group.add(new THREE.Mesh(new THREE.PlaneGeometry(RING * 2, RING * 2).rotateX(-Math.PI / 2), poolMat));
+  const across = V(0, 0, 0);
+  // the cone cut by the floor: its radius across, stretched along the beam by how low it comes in
+  const pool = (i, mesh, target) => {
+    across.subVectors(target, mesh.userData.src);
+    const L = across.length(), w = L * Math.tan(mesh.userData.half), dip = Math.max(-across.y / L, 0.2);
+    across.y = 0;
+    across.normalize();
+    poolMat.uniforms.uPool.value[i].set(target.x, target.z, across.x, across.z);
+    poolMat.uniforms.uSize.value[i].set(w, w / dip);
   };
 
   // Jumbotron hanging above the truss.
@@ -1222,6 +1271,9 @@ function buildRig(group, U) {
   );
 
   const tgt = V(0, 0, 0);
+  // Sway phase adds up speed × dt: hype changes how fast the beams move, never where they are. As
+  // time × speed(hype) it jumped by time × Δhype, so minutes into a session the beams flickered at random.
+  let sway = 0;
   return {
     sweeps,
     applyTheme(t) {
@@ -1233,15 +1285,18 @@ function buildRig(group, U) {
       white.value.set(t.light.key).lerp(new THREE.Color(1, 1, 1), 0.2);
       lensCol.set(t.light.key);
     },
-    update(time, hype, bk, intro, introT, sweepOut) {
+    update(dt, time, hype, bk, intro, introT, sweepOut) {
       const lit = 1 - bk;
       trussConeMat.uniforms.uIntensity.value = 0.1 * lit * (1 + 0.1 * hype * Math.sin(time * 9));
       // the KO camera looks up into the rig: lamps glow softly, the jumbotron stays under the bloom cut-off
       lensMat.color.copy(lensCol).multiplyScalar(1.5 * (0.03 + 0.97 * lit));
       screenMat.color.setScalar(1.05 * (0.2 + 0.8 * lit));
-      const sway = time * (0.25 + hype * 0.5);
+      sway += dt * (0.25 + hype * 0.5);
       aim(wallBeams[0], tgt.set(1.6 + Math.sin(sway) * 1.8, 0, -2.4 + Math.cos(sway * 0.7) * 1.0), 0.028 * lit);
+      pool(0, wallBeams[0], tgt);
       aim(wallBeams[1], tgt.set(-1.6 + Math.sin(sway + 2) * 1.8, 0, -2.4 + Math.cos(sway * 0.7 + 1) * 1.0), 0.028 * lit);
+      pool(1, wallBeams[1], tgt);
+      poolMat.uniforms.uLevel.value = 0.18 * lit;
       // Title-screen sweep: two white beams scan the stands behind the ring.
       sweeps.forEach((mesh, i) => {
         const phi = -Math.PI / 2 + 1.15 * Math.sin(introT * Math.PI * 2 + i * 2.4);
@@ -1534,7 +1589,7 @@ export function createArena(scene) {
 
     ropes.update(dt, 1 - 0.7 * bk);
     room.update(dt, bk);
-    rig.update(time, st.hype, bk, st.intro, st.introT, stands.sweep);
+    rig.update(dt, time, st.hype, bk, st.intro, st.introT, stands.sweep);
     air.update(bk);
     props.update(time);
     ring.setLevel(1 - 0.7 * bk);

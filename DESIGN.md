@@ -193,6 +193,8 @@ Type: big slanted condensed caps (Anton), mono for stats (JetBrains Mono).
   they reached 2 and hazed the frame. What crosses 1.2 is meant to: neon signs, rope cores, lamp
   lenses, sparks, attack tells (dimmed as the glove nears the lens), the hit flash. The jumbotron
   stays under it.
+- **Wall beams** sweep the ring from behind the stands. Hype sets how fast they move, never where
+  they point, and each leaves a soft pool of its colour where it lands on the canvas.
 - **Each floor has its own light** (`theme.light`): key colour and strength, fill, fog, haze, exposure,
   and an optional tube flicker. The rig stays in the same place; only its colour and strength change.
 
