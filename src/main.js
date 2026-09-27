@@ -1442,7 +1442,7 @@ function step() {
     const telling = fight && screen === 'fight' && (fight.o.state === 'windup' || fight.o.state === 'strike');
     for (const h of ['L', 'R']) {
       const l = fighter.limb[h];
-      fx.setTell(h, telling ? l.tell : 0, l.tellColor, fighter.gloveWorld(h, gloveTmp), t);
+      fx.setTell(h, telling ? l.tell * l.fade : 0, l.tellColor, fighter.gloveWorld(h, gloveTmp), t);
     }
   }
   // title camera drifts around the ring

@@ -795,6 +795,7 @@ export class Fighter {
     inv.copy(this.root.matrixWorld).invert();
     const bodyM = this.body.matrix;
     const armL = 0.3 * this.hs, foreL = 0.3 * this.hs;
+    const c = this.keepOut ? this.keepOut.getWorldPosition(this._v.c).applyMatrix4(inv) : null;
 
     for (const side of ['L', 'R']) {
       const sg = side === 'L' ? -1 : 1;
@@ -811,8 +812,7 @@ export class Fighter {
       // An arm inside the lens shows the inside of its black outline shell: the screen goes dark.
       // If the shoulder→glove line enters a sphere around the camera, stop the glove where it first
       // touches it; the arm then stays on the boss's side of the glove, whatever the player's dodge.
-      if (this.keepOut) {
-        const c = this.keepOut.getWorldPosition(this._v.c).applyMatrix4(inv);
+      if (c) {
         const r = 0.36 * this.shape.glove; // glove, cuff and forearm
         const ux = g.x - a.x, uy = g.y - a.y, uz = g.z - a.z;
         const wx = a.x - c.x, wy = a.y - c.y, wz = a.z - c.z;
@@ -833,9 +833,11 @@ export class Fighter {
       placeSegment(l.fore, e, this._v.b, this.limbR.fore);
       l.glove.position.copy(g);
       l.glove.lookAt(this._v.b.subVectors(g, e).normalize().add(g).applyMatrix4(this.root.matrixWorld));
-      // tell glow
+      // Tell glow, full at range. A glove closing on the lens fills the screen, and at full glow bloom
+      // turns it into a shapeless white ball, so up close it keeps only a tint below the bloom cut-off.
+      l.fade = c ? THREE.MathUtils.smoothstep(g.distanceTo(c), 0.5, 1.2) : 1;
       const gm = l.gloveMat;
-      const pulse = l.tell > 0 ? l.tell * (0.75 + 0.25 * Math.sin(t * 40)) : 0;
+      const pulse = l.tell > 0 ? l.tell * (0.75 + 0.25 * Math.sin(t * 40)) * (0.25 + 0.75 * l.fade) : 0;
       if (this.look.goldGloves) gm.emissive.set('#2e1d00').lerp(l.tellColor, pulse);
       else gm.emissive.copy(l.tellColor).multiplyScalar(pulse * 1.4);
 

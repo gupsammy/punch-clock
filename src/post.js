@@ -12,7 +12,10 @@ import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 // blur tap that touches it turns NaN, the bloom mips carry it across the screen and the whole frame
 // comes out black. Such a pixel is zeroed where the bloom and the grade read the scene, so a bad
 // pixel stays one dark pixel. NaN fails every comparison, which survives compilers that fold isnan().
-const FINITE = `vec3 finite(vec3 c){ return all(lessThan(abs(c), vec3(6.0e4))) ? c : vec3(0.0); }`;
+const finite = (bad) => `vec3 finite(vec3 c){ return all(lessThan(abs(c), vec3(6.0e4))) ? c : ${bad}; }`;
+const FINITE = finite('vec3(0.0)');
+// ?nan shows those pixels magenta on screen, to tell a GPU fault from something really drawn black
+const FINITE_GRADE = new URLSearchParams(location.search).has('nan') ? finite('vec3(4.0, 0.0, 4.0)') : FINITE;
 
 const GradeShader = {
   uniforms: {
@@ -41,7 +44,7 @@ uniform sampler2D tDiffuse, tBloom; uniform float time, ca, hurt, flash, invert,
 #include <colorspace_pars_fragment>
 varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
-${FINITE}
+${FINITE_GRADE}
 void main(){
   vec2 uv = vUv;
   vec2 d = uv - 0.5;
