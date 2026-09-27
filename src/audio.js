@@ -141,9 +141,12 @@ window.addEventListener('blur', () => sleep());
 window.addEventListener('focus', wake);
 window.addEventListener('pagehide', () => sleep(true));
 window.addEventListener('pageshow', wake);
-// iOS leaves the context suspended or "interrupted" after a switch and resumes it only inside a gesture,
-// and a punch's touchstart doesn't count as one. Any tap, click or key brings the sound back.
-for (const ev of ['touchend', 'pointerup', 'keydown']) window.addEventListener(ev, () => { if (ctx && (asleep || ctx.state !== 'running')) wake(); }, true);
+// Browsers start sound only inside a gesture, so the first click, tap or key anywhere starts it (not just
+// the buttons). iOS also leaves the context suspended or "interrupted" after a switch and resumes it only
+// on a touchend or click, never a punch's touchstart, so every later gesture brings the sound back too.
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'keydown']) {
+  window.addEventListener(ev, () => { if (!ctx || asleep || ctx.state !== 'running') try { init(); } catch (e) { console.warn('[audio]', e); } }, true);
+}
 
 function setMuted(b) {
   muted = !!b;
