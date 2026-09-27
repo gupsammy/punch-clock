@@ -113,28 +113,43 @@ function init() {
 
     setInterval(tick, TICK_MS);
   }
-  if (ctx.state !== 'running' && !document.hidden) ctx.resume().catch(() => {});
+  if (ctx.state !== 'running' || asleep) wake();
   if (pending) { const p = pending; pending = null; playMusic(...p); }
 }
 
 // A backgrounded tab keeps a running AudioContext playing, and with the iOS "playback" session the
-// music carries on from the lock screen. Suspending freezes currentTime, so the scheduler resumes on
-// the same beat. iOS may leave the context "interrupted" after a switch; the next tap's init() resumes it.
-function sleep() {
+// music carries on from the lock screen. The game also goes quiet while its window is behind another
+// app. Suspending freezes currentTime, so the scheduler resumes on the same beat; a short fade first
+// keeps the cut from clicking.
+let asleep = false;
+function sleep(now_) {
   try { window.speechSynthesis?.cancel(); } catch { /* no speech */ }
-  if (ctx) ctx.suspend().catch(() => {});
+  if (!ctx || asleep) return;
+  asleep = true;
+  master.gain.setTargetAtTime(0, now(), 0.02);
+  if (now_) ctx.suspend().catch(() => {});
+  else setTimeout(() => { if (asleep) ctx.suspend().catch(() => {}); }, 120);
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) sleep();
-  else if (ctx) ctx.resume().catch(() => {});
-});
-window.addEventListener('pagehide', sleep);
+function wake() {
+  if (!ctx || document.hidden) return;
+  asleep = false;
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  master.gain.setTargetAtTime(muted ? 0 : MASTER, now(), 0.05);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) sleep(); else wake(); });
+window.addEventListener('blur', () => sleep());
+window.addEventListener('focus', wake);
+window.addEventListener('pagehide', () => sleep(true));
+window.addEventListener('pageshow', wake);
+// iOS leaves the context suspended or "interrupted" after a switch and resumes it only inside a gesture,
+// and a punch's touchstart doesn't count as one. Any tap, click or key brings the sound back.
+for (const ev of ['touchend', 'pointerup', 'keydown']) window.addEventListener(ev, () => { if (ctx && (asleep || ctx.state !== 'running')) wake(); }, true);
 
 function setMuted(b) {
   muted = !!b;
   try { localStorage.setItem('pc_muted', muted ? '1' : '0'); } catch { /* storage blocked */ }
   if (muted) { try { window.speechSynthesis?.cancel(); } catch { /* no speech */ } }
-  if (ctx) master.gain.setTargetAtTime(muted ? 0 : MASTER, now(), 0.02);
+  if (ctx && !asleep) master.gain.setTargetAtTime(muted ? 0 : MASTER, now(), 0.02);
 }
 
 function setTimeScale(s) {

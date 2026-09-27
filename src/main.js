@@ -264,9 +264,10 @@ function selectFloor(i) {
   const wide = window.innerWidth > 760 && window.innerWidth > window.innerHeight;
   if (wide) player.setMenu(new THREE.Vector3(-1.05, 1.55, 0.95), new THREE.Vector3(-0.55, 1.35, -0.6));
   else {
-    // tilt up until the boss's head clears the bottom of the dossier
-    const f = clamp($('.dossier').getBoundingClientRect().bottom / window.innerHeight, 0.4, 0.85);
-    player.setMenu(new THREE.Vector3(0, 1.3, 2.0), new THREE.Vector3(0, 4.4 + (f - 0.73) * 8, -0.6));
+    fighter.update(0, 0, null, 0);
+    const top = $('.dossier').getBoundingClientRect().bottom, h = window.innerHeight;
+    // under a tall dossier the gap shrinks, but the face stays at least 80 px above the bottom edge
+    headAt(new THREE.Vector3(0, 1.3, 2.0), fighter.headWorld(new THREE.Vector3()), Math.min((top + h) / 2, h - 80));
   }
   audio.uiMove();
 }
@@ -791,13 +792,16 @@ function vsSelectCam(snap) {
   // the same query that stacks the select screen into one column (styles.css)
   const stacked = matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
   if (!stacked) { player.setMenu(new THREE.Vector3(1.05, 1.55, SELF_Z - 1.55), new THREE.Vector3(0.55, 1.35, SELF_Z), snap); return; }
-  const pos = new THREE.Vector3(0.3, 1.4, SELF_Z - 2);
   const gapTop = $('.sel-card').getBoundingClientRect().bottom, gapBottom = $('.sel-bottom').getBoundingClientRect().top;
-  const ndcY = 1 - (gapTop + gapBottom) / window.innerHeight;
-  const headY = fighter?.corner ? fighter.headWorld(new THREE.Vector3()).y : 1.6;
-  const dist = Math.hypot(pos.x, SELF_Z - pos.z);
-  const pitch = Math.atan2(headY - pos.y, dist) - Math.atan(ndcY * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
-  player.setMenu(pos, new THREE.Vector3(0, pos.y + dist * Math.tan(pitch), SELF_Z), snap);
+  const head = fighter?.corner ? fighter.headWorld(new THREE.Vector3()) : new THREE.Vector3(0, 1.6, SELF_Z);
+  headAt(new THREE.Vector3(0.3, 1.4, SELF_Z - 2), head, (gapTop + gapBottom) / 2, snap);
+}
+// Menu camera at pos, tilted so a head at world point head lands y px down the screen.
+function headAt(pos, head, y, snap) {
+  const ndcY = 1 - 2 * y / window.innerHeight;
+  const dist = Math.hypot(head.x - pos.x, head.z - pos.z);
+  const pitch = Math.atan2(head.y - pos.y, dist) - Math.atan(ndcY * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  player.setMenu(pos, new THREE.Vector3(head.x, pos.y + dist * Math.tan(pitch), head.z), snap);
 }
 
 function buildTiles() {
@@ -1173,9 +1177,12 @@ function postShare() {
   const text = shareText();
   const link = `https://${SITE}/`;
   if (canShare) {
-    const file = shareFiles[shareTab === 'clip' && clipBlob ? 'clip' : 'card'];
-    const data = file && navigator.canShare({ files: [file] }) ? { files: [file], text: `${text} ${link}` } : { text, url: link };
-    navigator.share(data).catch((e) => {
+    const isClip = shareTab === 'clip' && clipBlob;
+    const file = shareFiles[isClip ? 'clip' : 'card'];
+    const ok = file && navigator.canShare({ files: [file] });
+    // a link alone would post the site's preview image in place of the clip, so save the clip instead
+    if (isClip && !ok) { saveImage(); $('#shareNote').textContent = 'This browser can\'t share video. Clip saved: post it from your photos.'; return; }
+    navigator.share(ok ? { files: [file], text: `${text} ${link}` } : { text, url: link }).catch((e) => {
       if (e.name !== 'AbortError') $('#shareNote').textContent = `Couldn't open sharing. Save the ${shareTab} and post it yourself.`;
     });
     return;
