@@ -57,6 +57,8 @@ const input = createInput($('#touchpad'));
 // Fill rate, not geometry, is the cost here (4x MSAA half-float target, then bloom and grade), so a big
 // window gets no more than ~4.2M pixels a frame however dense the display.
 const MAX_PIXELS = 4.2e6;
+// a resize clears the canvas; a paused game, which otherwise keeps its last frame, draws one more
+let stale = true;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   const pr = Math.min(PR, Math.max(1, Math.sqrt(MAX_PIXELS / (w * h))));
@@ -70,6 +72,7 @@ function resize() {
   camera.fov = player.baseFov;
   camera.updateProjectionMatrix();
   post.setSize(w, h, pr);
+  stale = true;
 }
 window.addEventListener('resize', resize);
 resize();
@@ -77,17 +80,30 @@ resize();
 // Slow device: step quality down rather than the frame rate. Only fights count, because menus idle
 // and a hidden tab reports huge gaps. Order: MSAA 4x -> 2x (hard to see), then resolution a quarter
 // step at a time down to 1x, then MSAA off with FXAA in its place.
-const perf = { t: 0, n: 0 };
+// A browser frame cap (Chrome Energy Saver, iPhone Low Power Mode: 30 fps) looks the same as a slow
+// GPU, but no drop raises it. `from` marks the quality where the drops that bought no frames began;
+// at the bottom, quality goes back there and the watch ends.
+// The first second of a fight (shader compiles, the long first frame) would read as a slow device, and
+// the next window as a gain, so it is skipped.
+const perf = { t: 0, n: 0, warm: 1, from: null, done: false };
 function watchFrames(realDt) {
-  if (screen !== 'fight' || paused || (PR <= 1 && post.samples === 0)) return;
+  if (perf.done || screen !== 'fight' || paused) { perf.t = perf.n = 0; perf.warm = 1; return; }
+  if (perf.warm > 0) { perf.warm -= realDt; return; }
   perf.t += realDt; perf.n++;
   if (perf.t < 2) return;
-  if (perf.n / perf.t < 45) {
-    if (post.samples > 2) post.setSamples(2);
-    else if (PR > 1) { PR = Math.max(1, PR - 0.25); resize(); }
-    else post.setSamples(0);
-  }
+  const fps = perf.n / perf.t;
   perf.t = 0; perf.n = 0;
+  if (fps >= 45) return;
+  if (!perf.from || fps > perf.from.fps * 1.15) perf.from = { fps, samples: post.samples, PR };
+  if (post.samples > 2) post.setSamples(2);
+  else if (PR > 1) { PR = Math.max(1, PR - 0.25); resize(); }
+  else if (post.samples > 0) post.setSamples(0);
+  else {
+    const { samples, PR: pr } = perf.from;
+    if (samples !== post.samples) post.setSamples(samples);
+    if (pr !== PR) { PR = pr; resize(); }
+    perf.done = true;
+  }
 }
 
 // ---------- save ----------
@@ -1441,7 +1457,9 @@ function step() {
   ui.update(realDt);
   if (screen === 'fight' && !paused) feed.update(realDt);
   if (vs && screen === 'fight' && Math.floor(t * 2) !== Math.floor((t - realDt) * 2)) $('#hudFloor').textContent = vs.net?.rtt ? `1V1 · ${Math.round(vs.net.rtt)} MS` : '1V1';
-  post.render(realDt, t);
+  // paused, the canvas keeps its last frame under the blurred menu, so drawing it again (and the
+  // browser blurring it again) buys nothing
+  if (!paused || stale || captureReq) { post.render(realDt, t); stale = false; }
   clip.update(realDt, canvas, paused);
   if (window.__pc?.onFrame) window.__pc.onFrame(canvas);
   if (captureReq) {

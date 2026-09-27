@@ -49,9 +49,17 @@ class Pool {
       this.mesh.setMatrixAt(i, this.m);
       if (p.color && this.mesh.instanceColor) this.mesh.setColorAt(i, p.color);
     }
-    this.mesh.count = this.p.length;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    // three uploads a flagged buffer whole whatever `count` says, so only live slots are flagged. An
+    // empty pool stays visible: drawing zero instances costs nothing and keeps its shader compiled
+    // before the first hit, not on it.
+    const n = this.p.length;
+    this.mesh.count = n;
+    if (!n) return;
+    for (const a of [this.mesh.instanceMatrix, this.mesh.instanceColor]) {
+      if (!a) continue;
+      a.addUpdateRange(0, n * a.itemSize);
+      a.needsUpdate = true;
+    }
   }
   clear() { this.p.length = 0; this.mesh.count = 0; }
 }

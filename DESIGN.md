@@ -153,7 +153,9 @@ Cards and clips carry the play link. mp4 where the browser records it, webm othe
   to the bottom, so NEXT / START is never below the fold.
 - Haptics on Android: perfect dodge, taking a hit, knockdown, KO.
 - If a fight runs under 45 fps for 2 s, quality drops one step: MSAA 4x → 2x, then the pixel ratio a
-  quarter step at a time down to 1, then MSAA off with FXAA in its place.
+  quarter step at a time down to 1, then MSAA off with FXAA in its place. The first second of a fight
+  is not counted. Drops that gain no frames are undone at the bottom and the watch ends: a browser
+  that caps pages at 30 fps (Chrome Energy Saver, iPhone Low Power Mode) keeps full quality.
 - Touch devices start with FXAA, not MSAA. On a Samsung Xclipse 940 (ANGLE on Vulkan) the
   multisampled half-float scene target resolves with bad pixels, and bloom spreads them until every
   frame is black. MSAA off, bloom off or an 8-bit target each fixed it; FXAA is the one that keeps
@@ -166,6 +168,12 @@ Cards and clips carry the play link. mp4 where the browser records it, webm othe
   time to 5.
 - The HUD and chat write to the DOM only when a value changes, and the speech bubble moves with
   `translate`, so a frame does not force a page layout for text that looks the same.
+- A paused fight stops drawing: the canvas keeps its last frame under the blurred menu. A resize
+  clears the canvas, so it draws one frame.
+- The clip recorder copies the game canvas 30 times a second, the rate its stream keeps, not once per
+  display frame.
+- Particle pools send only their live slots to the GPU, and nothing when empty. Empty pools stay in
+  the scene so their shaders compile before the first hit.
 
 ## Look
 Dark arena, neon ring ropes, volumetric spotlights, crowd of office-worker silhouettes with phone flashes,

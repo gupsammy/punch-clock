@@ -3,7 +3,7 @@ import { fmtTime, SITE } from './ui.js';
 // Rolling fight recorder (DESIGN.md "Clips"). Two recorders restart every CYCLE seconds, CYCLE/2 apart,
 // so the older one always holds the last 4-8 s. Timing runs off update(dt), so a paused game pauses the clip.
 // The end card holds long enough to read the play link.
-const CYCLE = 8, CARD = 2.5, TAIL = 2.6 + CARD;
+const CYCLE = 8, CARD = 2.5, TAIL = 2.6 + CARD, FPS = 30;
 const TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
 const DISP = '"Anton", Impact, sans-serif', MONO = '"JetBrains Mono", monospace';
 
@@ -13,7 +13,7 @@ export function createClip({ audio, maxSide }) {
   const cv = document.createElement('canvas');
   const g = cv.getContext('2d');
   let stream = null, fight = null, recs = [], marks = [], latest = null, paused = false;
-  let callout = null, quote = null, clock = 0;
+  let callout = null, quote = null, clock = 0, since = 0;
 
   function record() {
     const rec = { mr: new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 4e6 }), chunks: [], age: 0 };
@@ -135,11 +135,11 @@ export function createClip({ audio, maxSide }) {
       try {
         for (const r of recs) kill(r);
         size(src);
-        if (!stream) stream = cv.captureStream(30);
+        if (!stream) stream = cv.captureStream(FPS);
         // audio exists only after the first user gesture, so keep trying until it does
         if (!stream.getAudioTracks().length) { const a = audio.stream()?.getAudioTracks()[0]; if (a) stream.addTrack(a); }
         recs = [record(), null];
-        clock = 0;
+        clock = 0; since = 1 / FPS;
       } catch (e) { console.warn('[clip]', e); recs = []; }
     },
 
@@ -186,11 +186,18 @@ export function createClip({ audio, maxSide }) {
       }
       if (callout) callout.t -= dt;
       if (quote) quote.t -= dt;
-      g.drawImage(src, 0, 0, cv.width, cv.height);
-      if (fight) overlay();
+      // the stream keeps at most FPS frames a second; drawing on every display frame (60 or 120 Hz)
+      // copies the game canvas for frames it drops. The slack lets a 60 Hz display draw every second frame.
+      since += dt;
+      const draw = since >= 1 / FPS - 0.004;
+      if (draw) {
+        since = Math.min(since - 1 / FPS, 1 / FPS);
+        g.drawImage(src, 0, 0, cv.width, cv.height);
+        if (fight) overlay();
+      }
       for (const m of live) {
         m.left -= dt;
-        if (m.left < CARD && m.keep) endCard(m, CARD - m.left);
+        if (draw && m.left < CARD && m.keep) endCard(m, CARD - m.left);
         if (m.left <= 0) finish(m);
       }
     },
