@@ -188,6 +188,11 @@ Type: big slanted condensed caps (Anton), mono for stats (JetBrains Mono).
   skin; Neutral keeps each floor's hues and only rolls off the top.
 - **Toon ramp:** four bands, not three. Shadows lean cool violet, the lit band leans warm, so a
   character reads as lit from the key even in a single frame.
+- **Only glows bloom.** Bloom starts at 1.2. Lit toon colour (key, fill and neon rim) stops at 1.1
+  with its hue kept, so faces, ties and gloves never bloom, even face-up under the key; before the cap
+  they reached 2 and hazed the frame. What crosses 1.2 is meant to: neon signs, rope cores, lamp
+  lenses, sparks, attack tells (dimmed as the glove nears the lens), the hit flash. The jumbotron
+  stays under it.
 - **Each floor has its own light** (`theme.light`): key colour and strength, fill, fog, haze, exposure,
   and an optional tube flicker. The rig stays in the same place; only its colour and strength change.
 

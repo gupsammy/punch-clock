@@ -1159,7 +1159,7 @@ function buildRig(group, U) {
   const canGeo = new THREE.CylinderGeometry(0.13, 0.16, 0.34, 10);
   const lensGeo = new THREE.CircleGeometry(0.125, 14).rotateX(Math.PI / 2).translate(0, -0.172, 0);
   const canMesh = new THREE.InstancedMesh(canGeo, new THREE.MeshStandardMaterial({ color: 0x1a1a20, metalness: 0.4, roughness: 0.5 }), cans.length);
-  const lensMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.9, 0.75).multiplyScalar(2.2), fog: false });
+  const lensMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.9, 0.75).multiplyScalar(1.5), fog: false });
   const lensMesh = new THREE.InstancedMesh(lensGeo, lensMat, cans.length);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = V(1, 1, 1);
   const cones = [];
@@ -1236,8 +1236,9 @@ function buildRig(group, U) {
     update(time, hype, bk, intro, introT, sweepOut) {
       const lit = 1 - bk;
       trussConeMat.uniforms.uIntensity.value = 0.1 * lit * (1 + 0.1 * hype * Math.sin(time * 9));
-      lensMat.color.copy(lensCol).multiplyScalar(2.2 * (0.03 + 0.97 * lit));
-      screenMat.color.setScalar(1.3 * (0.2 + 0.8 * lit));
+      // the KO camera looks up into the rig: lamps glow softly, the jumbotron stays under the bloom cut-off
+      lensMat.color.copy(lensCol).multiplyScalar(1.5 * (0.03 + 0.97 * lit));
+      screenMat.color.setScalar(1.05 * (0.2 + 0.8 * lit));
       const sway = time * (0.25 + hype * 0.5);
       aim(wallBeams[0], tgt.set(1.6 + Math.sin(sway) * 1.8, 0, -2.4 + Math.cos(sway * 0.7) * 1.0), 0.028 * lit);
       aim(wallBeams[1], tgt.set(-1.6 + Math.sin(sway + 2) * 1.8, 0, -2.4 + Math.cos(sway * 0.7 + 1) * 1.0), 0.028 * lit);

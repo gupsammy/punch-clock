@@ -50,14 +50,22 @@ export function toonMat(color, { map = null, transparent = false, flash = null, 
       .replace('#include <common>', `#include <common>
 uniform vec3 rimColor; uniform vec3 rimColor2; uniform float rimStrength; uniform float flash; varying vec3 vWN;`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+vec3 rimLight;
 {
   vec3 vdir = normalize(vViewPosition);
   float fres = pow(1.0 - clamp(dot(normalize(normal), vdir), 0.0, 1.0), 3.4);
   // Left side of the world gets colour A, right side colour B, like two rim lights.
   vec3 rc = mix(rimColor, rimColor2, smoothstep(-0.4, 0.4, vWN.x));
-  totalEmissiveRadiance += rc * fres * rimStrength;
+  rimLight = rc * fres * rimStrength;
   totalEmissiveRadiance += vec3(flash);
-}`);
+}`)
+      // Lit colour stops under the bloom cut-off (1.2), hue kept: the overhead key otherwise pushed faces,
+      // shirts and ties to 2, and a boss lying face-up under it bloomed into a haze. Only emissive
+      // (attack tells, the hit flash) glows.
+      .replace('vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;', `vec3 lit = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + rimLight;
+  lit *= min(1.0, 1.1 / max(max(lit.r, max(lit.g, lit.b)), 1e-4));
+  vec3 outgoingLight = lit + totalEmissiveRadiance;`);
+    if (!shader.fragmentShader.includes('vec3 lit =')) console.warn('[materials] toon light cap not applied');
   };
   m.customProgramCacheKey = () => 'toonrim';
   return m;
