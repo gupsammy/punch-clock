@@ -106,6 +106,8 @@
       <button class="btn" data-act="shift">DAILY SHIFT<small id="shiftSub">NEW EVERY DAY</small></button>
       <button class="btn" data-act="vs">VS A COLLEAGUE<small>1:1 MEETING · ONLINE</small></button>
     </div>
+    <!-- Number the shift before first paint; main.js loads after three.js, so waiting for it resizes the button. Same count as shiftNumber() in src/shift.js. -->
+    <script>{ const d = new Date(); document.getElementById('shiftSub').textContent = `#${Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 8, 1)) / 864e5) + 1} · NEW EACH DAY`; }</script>
     <div class="menu links">
       <button class="btn ghost" data-act="howto">EMPLOYEE HANDBOOK</button>
       <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>

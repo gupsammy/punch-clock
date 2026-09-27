@@ -24,7 +24,7 @@ export const PERKS = [
 ];
 
 const EPOCH = Date.UTC(2026, 8, 1);
-// days since launch, counted on the player's own calendar date
+// days since launch, counted on the player's own calendar date (index.html repeats this for first paint)
 export function shiftNumber(now = new Date()) {
   return Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - EPOCH) / 864e5) + 1;
 }
