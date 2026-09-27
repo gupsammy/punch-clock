@@ -38,10 +38,10 @@ export function createClip({ audio, maxSide }) {
     g.fillRect(flip ? x + w - fw : x, y, fw, h);
     g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, h * 0.12); g.strokeRect(x, y, w, h);
   }
-  function text(str, x, y, font, color, align = 'left', stroke = 0) {
+  function text(str, x, y, font, color, align = 'left', stroke = 0, maxW) {
     g.font = font; g.textAlign = align;
-    if (stroke) { g.lineWidth = stroke; g.strokeStyle = '#000'; g.lineJoin = 'round'; g.strokeText(str, x, y); }
-    g.fillStyle = color; g.fillText(str, x, y);
+    if (stroke) { g.lineWidth = stroke; g.strokeStyle = '#000'; g.lineJoin = 'round'; g.strokeText(str, x, y, maxW); }
+    g.fillStyle = color; g.fillText(str, x, y, maxW);
   }
 
   function overlay() {
@@ -65,7 +65,7 @@ export function createClip({ audio, maxSide }) {
     if (callout && callout.t > 0) {
       const s = 1 + Math.max(0, callout.t - callout.dur + 0.12) * 4;
       g.save(); g.translate(W / 2, H * 0.62); g.scale(s, s); g.transform(1, 0, -0.18, 1, 0, 0);
-      text(callout.text, 0, 0, `${u * 6}px ${DISP}`, callout.color, 'center', u * 0.9);
+      text(callout.text, 0, 0, `${u * 6}px ${DISP}`, callout.color, 'center', u * 0.9, W * 0.8);
       g.restore();
     }
     text('#PUNCHCLOCK', pad, H - pad, `700 ${u * 1.7}px ${MONO}`, 'rgba(255,255,255,.8)');

@@ -339,9 +339,9 @@ export const FIRED_LINES = [
 // Pop-up words, by event.
 export const CALLOUTS = {
   counter: ['COUNTER!', 'PUNISHED!', 'CORRECTED!'],
-  perfect: ['PERFECT!', 'UNTOUCHABLE', 'NOT TODAY'],
+  perfect: ['PERFECT!', 'UNTOUCHABLE', 'OUT OF OFFICE'],
   disrespect: ['DISRESPECT!', 'RUDE!', 'UNPROFESSIONAL!'],
   haymaker: ['HAYMAKER!!', 'FIRED!!', 'TERMINATED!!'],
-  interrupt: ['INTERRUPTED!', 'NOT NOW!'],
-  combo: ['NICE', 'BRUTAL', 'SAVAGE', 'TAX DEDUCTIBLE', 'OVERTIME', 'BONUS ELIGIBLE', 'LAWSUIT PENDING'],
+  interrupt: ['INTERRUPTED!', 'LET ME STOP YOU THERE'],
+  combo: ['SYNERGY', 'KPI MET', 'ABOVE TARGET', 'TAX DEDUCTIBLE', 'OVERTIME', 'BONUS ELIGIBLE', 'LAWSUIT PENDING'],
 };

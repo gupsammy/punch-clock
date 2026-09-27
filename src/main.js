@@ -638,7 +638,7 @@ function vsConnect() {
   const live = (fn) => (...a) => { if (vs === mine && mine.gen === gen) fn(...a); };
   connect({ code: mine.code, local: mine.local, lag: mine.lag }, {
     msg: live(onVsMsg), join: live(onVsJoin), leave: live(onVsLeave),
-    error: live(() => vsStatus('Found your friend but could not connect. Both go back and try again.', 'bad')),
+    error: live(() => vsStatus('Found your colleague but could not connect. Both go back and try again.', 'bad')),
   }).then((n) => {
     if (vs !== mine || mine.gen !== gen) { n.close(); return; }
     mine.net = n;
@@ -646,7 +646,7 @@ function vsConnect() {
   }).catch(live(() => vsStatus('Could not load the connection code. Check your internet and try again.', 'bad')));
   // the relay (api/turn.mjs) gets through almost any network, so silence means the room isn't answering
   setTimeout(live(() => {
-    if (!mine.peer && !mine.creator) vsStatus(`No answer from room ${mine.code} yet. Ask your friend to open the game and stay on the room screen. Still trying…`, 'wait');
+    if (!mine.peer && !mine.creator) vsStatus(`No answer from meeting ${mine.code} yet. Ask your colleague to open the game and stay on the meeting screen. Still trying…`, 'wait');
   }), 20000);
 }
 
@@ -681,7 +681,7 @@ function vsBackdrop(i) {
   audio.playMusic('elevator');
 }
 
-// VS A FRIEND: host or join. Coming back here drops any room you were in.
+// VS A COLLEAGUE: host or join. Coming back here drops any room you were in.
 function toVsMenu() {
   vsClose();
   history.replaceState(null, '', location.pathname);
@@ -708,18 +708,18 @@ function toVsLobby() {
     screen = 'vsLobby';
     $('#vlCells').querySelectorAll('i').forEach((c, k) => { c.textContent = vs.code[k]; });
     $('#vlLink').textContent = vsLink().replace(/^https?:\/\//, '');
-    $('#vlShare span').textContent = canShare ? 'SHARE LINK' : 'COPY LINK';
+    $('#vlShare span').textContent = canShare ? 'INVITE' : 'COPY LINK';
     $('#vlShare use').setAttribute('href', canShare ? '#i-share' : '#i-copy');
-    vsStatus('Waiting for your friend. Keep this screen open until they join', 'wait');
+    vsStatus('Waiting for your colleague to join. Keep this screen open', 'wait');
     show('vsLobby');
   } else {
     screen = 'vsJoin';
     $('#vjInput').value = vs.code;
     renderJoin();
-    vsStatus(`Joining room ${vs.code}`, 'wait');
+    vsStatus(`Joining meeting ${vs.code}`, 'wait');
     show('vsJoin');
   }
-  // the shader compile is a visible hitch on phones: pay it while waiting, not when the friend arrives
+  // the shader compile is a visible hitch on phones: pay it while waiting, not when the colleague arrives
   setTimeout(portraits, 600);
 }
 
@@ -727,22 +727,22 @@ function sendHi() { vs.net.send({ k: 'hi', v: VS_VERSION, r: vs.r }); }
 
 function onVsJoin() {
   vs.peer = true;
-  vsStatus('Friend found. Shaking hands', 'wait');
+  vsStatus('Your colleague has joined the meeting', 'wait');
   if (vs.net) sendHi();
 }
 
 function onVsLeave() {
   vs.peer = false; vs.gotHi = false; vs.themReady = false;
   if (fight instanceof Versus && (screen === 'fight' || screen === 'intro')) { fight.forfeit(); return; }
-  if (screen === 'vsEnd') { $('#veAgain').textContent = 'YOUR OPPONENT LEFT'; return; }
+  if (screen === 'vsEnd') { $('#veAgain').textContent = 'YOUR COLLEAGUE LEFT THE MEETING'; return; }
   toVsLobby();
-  vsStatus('Your friend left. Waiting for them to come back', 'wait');
+  vsStatus('Your colleague dropped off the call. Waiting for them to rejoin', 'wait');
 }
 
 function onVsMsg(m) {
   switch (m.k) {
     case 'hi':
-      if (m.v !== VS_VERSION) { vsStatus('You and your friend are on different versions. Both reload the page.', 'bad'); return; }
+      if (m.v !== VS_VERSION) { vsStatus('You and your colleague are on different versions. Both reload the page.', 'bad'); return; }
       vs.host = vs.r > m.r;
       // greet back once: whichever greeting got lost, both sides end up here
       if (!vs.gotHi) { vs.gotHi = true; sendHi(); audio.uiSelect(); toVsSelect(); }
@@ -946,11 +946,11 @@ function renderSelect() {
     b.classList.toggle('them', i === vs.them);
   }
   const them = $('#selThem');
-  them.textContent = !vs.peer ? 'OPPONENT DISCONNECTED' : vs.them === null ? 'OPPONENT IS BROWSING'
-    : `OPPONENT: ${ROSTER[vs.them].name}${vs.themReady ? ' · LOCKED IN' : ''}`;
+  them.textContent = !vs.peer ? 'COLLEAGUE DROPPED OFF THE CALL' : vs.them === null ? 'COLLEAGUE IS BROWSING'
+    : `COLLEAGUE: ${ROSTER[vs.them].name}${vs.themReady ? ' · LOCKED IN' : ''}`;
   them.classList.toggle('ready', vs.themReady);
   const lock = $('#selLock');
-  lock.textContent = vs.meReady ? (vs.themReady ? 'MATCH SET' : 'LOCKED ✓ (UNLOCK)') : 'LOCK IN';
+  lock.textContent = vs.meReady ? (vs.themReady ? 'MEETING CONFIRMED' : '✓ SIGNED (RETRACT)') : 'SIGN OFF';
   lock.classList.toggle('locked', vs.meReady);
   // the ring is yours: your pick on your floor, showing off once locked in
   if (showSelf(d)) applyTheme(d);
@@ -987,14 +987,14 @@ function startVsIntro() {
   feed.stop();
   ui.setupFight(them, isCoarse);
   $('#youTitle').textContent = `${me.name} · ${me.title}`;
-  $('#hudFloor').textContent = '1V1';
+  $('#hudFloor').textContent = '1:1';
   $('#meter .lbl span').textContent = 'SPECIAL';
   fight = new Versus(me, them, ctx, vs.net, vs.host);
   fight.intro();
   screen = 'intro';
   introT = 0;
   vsMenu = false;
-  $('#iFloor').textContent = `1V1 · ${me.name} (YOU) VS`;
+  $('#iFloor').textContent = `1:1 · ${me.name} (YOU) VS`;
   $('#iName').textContent = them.name;
   $('#iTitle').textContent = them.title;
   $('#iTag').textContent = them.tagline;
@@ -1059,7 +1059,7 @@ function toVsEnd(r) {
   big.classList.toggle('lose', !r.win);
   $('#veLine').textContent = {
     ko: r.win ? `${them.name} has been let go. Effective immediately.` : `${them.name} let you go. Effective immediately.`,
-    decision: r.win ? 'The clock ran out. You won on points.' : 'The clock ran out. You lost on points.',
+    decision: r.win ? 'The clock ran out. You won on KPIs.' : 'The clock ran out. You missed your KPIs.',
     forfeit: `${them.name} clocked out early. The win is yours.`,
   }[r.why];
   const s = r.stats;
@@ -1076,8 +1076,8 @@ function toVsEnd(r) {
 function renderVsAgain() {
   if (screen !== 'vsEnd') return;
   const name = ROSTER[vs.them].name.split(' ')[0];
-  $('#veAgain').textContent = !vs.peer ? 'YOUR OPPONENT LEFT' : vs.again.them ? `${name} WANTS A REMATCH` : vs.again.me ? `WAITING FOR ${name}` : '';
-  $('#veAgainBtn').textContent = vs.again.me ? 'WAITING…' : vs.again.them ? 'ACCEPT REMATCH' : 'REMATCH';
+  $('#veAgain').textContent = !vs.peer ? 'YOUR COLLEAGUE LEFT THE MEETING' : vs.again.them ? `${name} WANTS A FOLLOW-UP` : vs.again.me ? `WAITING FOR ${name}` : '';
+  $('#veAgainBtn').textContent = vs.again.me ? 'WAITING…' : vs.again.them ? 'ACCEPT FOLLOW-UP' : 'SCHEDULE FOLLOW-UP';
 }
 
 function vsAgain() {
@@ -1098,8 +1098,8 @@ async function flashCopy(b, text, done) {
 }
 // phones get the share sheet (WhatsApp, Messages…); desktops copy the link
 function vsSend() {
-  const text = `Fight me in PUNCH CLOCK. Loser gets fired. Room code ${vs.code}`;
-  if (canShare) navigator.share({ title: 'PUNCH CLOCK 1V1', text, url: vsLink() }).catch(() => {});
+  const text = `You've been invited to a 1:1 in PUNCH CLOCK. Agenda: violence. Meeting ID ${vs.code}`;
+  if (canShare) navigator.share({ title: 'PUNCH CLOCK 1:1', text, url: vsLink() }).catch(() => {});
   else flashCopy($('#vlShare'), vsLink(), 'LINK COPIED');
 }
 
@@ -1220,7 +1220,7 @@ function saveImage() {
 function setPause(on) {
   if (screen !== 'fight') return;
   // versus never stops the clock: the menu opens over a live fight
-  if (vs) { vsMenu = on; overlay('pause', on); $('#quitBtn').textContent = 'LEAVE MATCH'; return; }
+  if (vs) { vsMenu = on; overlay('pause', on); $('#quitBtn').textContent = 'LEAVE MEETING'; return; }
   paused = on;
   overlay('pause', on);
   $('#quitBtn').textContent = run ? 'CLOCK OUT (ENDS SHIFT)' : 'QUIT TO ELEVATOR';
@@ -1276,7 +1276,7 @@ document.addEventListener('click', (e) => {
     case 'vsJoin': toVsJoin(); break;
     case 'vsBack': toVsMenu(); break;
     case 'vsSend': vsSend(); break;
-    case 'vsCopyCode': flashCopy(b, vs.code, 'CODE COPIED'); break;
+    case 'vsCopyCode': flashCopy(b, vs.code, 'ID COPIED'); break;
     case 'vsLeave': vsLeave(); break;
     case 'vsLock': vsLock(!vs?.meReady); break;
     case 'vsTile': vsBrowse(+b.dataset.i); break;
@@ -1456,7 +1456,7 @@ function step() {
   fx.update(dt, t, fighter ? headTmp : null, realDt);
   ui.update(realDt);
   if (screen === 'fight' && !paused) feed.update(realDt);
-  if (vs && screen === 'fight' && Math.floor(t * 2) !== Math.floor((t - realDt) * 2)) $('#hudFloor').textContent = vs.net?.rtt ? `1V1 · ${Math.round(vs.net.rtt)} MS` : '1V1';
+  if (vs && screen === 'fight' && Math.floor(t * 2) !== Math.floor((t - realDt) * 2)) $('#hudFloor').textContent = vs.net?.rtt ? `1:1 · ${Math.round(vs.net.rtt)} MS` : '1:1';
   // paused, the canvas keeps its last frame under the blurred menu, so drawing it again (and the
   // browser blurring it again) buys nothing
   if (!paused || stale || captureReq) { post.render(realDt, t); stale = false; }

@@ -92,7 +92,7 @@ shadow. A click punches a hole in the card.
 | chip | `.chip` | outlined, icon and word | 44 | body, bold |
 
 - One main button per screen, at most two secondary. BACK, LEAVE and CLOSE are text buttons and come last.
-  An overlay opened over another screen (how to fight, share) is opaque, so only one main button is in sight.
+  An overlay opened over another screen (employee handbook, share) is opaque, so only one main button is in sight.
 - The title's three mode cards are peers: one row of equal cards that narrow before they wrap (stacked under 560 px).
 - Anything you can tap is at least 44 × 44.
 
@@ -113,7 +113,7 @@ overlaps nothing. The top of the HUD is a grid (bars, clock, bars; then chat and
 so each row starts below everything above it; no HUD element sets its own `top`.
 
 ## Daily Shift (career run)
-A second mode beside the ladder. Title → **DAILY CHALLENGE** (caption `#N · NEW EACH DAY`; in-game it is the shift) → shift memo (today's modifier, pick one
+A second mode beside the ladder. Title → **DAILY SHIFT** (caption `#N · NEW EACH DAY`) → shift memo (today's modifier, pick one
 perk) → all six floors back to back, no elevator. N = days since 2026-09-01; everyone gets the same
 modifier on the same day (chosen from N, not random).
 - **Clock**: the shift time is the sum of in-fight time on every attempt, failures included.

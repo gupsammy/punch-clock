@@ -121,7 +121,7 @@ export class Fight {
       return true;
     }
     if (action === 'haymaker') {
-      if (p.meter < 100) { if (p.state === 'idle') this.ctx.ui.popup(this.mod.noMeter ? 'OVERTIME CANCELLED (BUDGET)' : 'OVERTIME NOT READY'); return true; }
+      if (p.meter < 100) { if (p.state === 'idle') this.ctx.ui.popup(this.mod.noMeter ? 'OVERTIME CANCELLED (BUDGET)' : 'OVERTIME NOT APPROVED'); return true; }
       if (!this.canPunch()) return false;
       this.startHaymaker();
       return true;

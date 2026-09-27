@@ -1,18 +1,18 @@
 # PUNCH CLOCK — 1v1 VERSUS
 
-Two friends, one link, first-person on both ends. You see your own gloves; your friend is the fighter
+Two colleagues, one link, first-person on both ends. You see your own gloves; your colleague is the fighter
 in front of you. The single-player loop (read, dodge, punish) runs on both sides at once: each player
 throws telegraphed attacks like a boss and fast punches into openings like the player.
 
 ## Flow
-Title → **VS A FRIEND** → a menu with two cards:
-- **HOST A MATCH** → *your room*: a fresh 6-character code, the invite link under it, and two chips,
-  SHARE LINK (share sheet where the device has one, else COPY LINK) and COPY CODE.
-- **JOIN A MATCH** → *join*: six code boxes and JOIN. Opening an invite link lands here with the code
+Title → **VS A COLLEAGUE** → a menu with two cards:
+- **BOOK A 1:1** → *meeting room 4B*: a fresh 6-character meeting ID, the invite link under it, and two
+  chips, INVITE (share sheet where the device has one, else COPY LINK) and COPY ID.
+- **JOIN A 1:1** → *join*: six code boxes and JOIN. Opening an invite link lands here with the code
   filled in and already joining; the code can still be changed.
 
-BACK on either goes to the menu; BACK on the menu goes to the title. Friend joins → **character
-select** (both, live) → both locked → intro card "YOU vs THEM" → fight → **result** (REMATCH / NEW FIGHTERS / LEAVE).
+BACK on either goes to the menu; BACK on the menu goes to the title. Colleague joins → **character
+select** (both, live) → both locked → intro card "YOU vs THEM" → fight → **result** (SCHEDULE FOLLOW-UP / REORG / LEAVE MEETING).
 The room creator is the **host**: it starts the fight and owns the round clock. Nothing else differs.
 
 ## Network
@@ -121,7 +121,7 @@ faces them from in front, right of your card when wide, below it when narrow, an
 the opponent's spot. Your opponent's pick shows only as the THEM badge and the line top right.
 Your card (name, bars, good at / watch out, moves) sits on the left; six face tiles along the bottom
 (each fighter's real 3D head, rendered once on a throwaway renderer while the lobby waits, then
-cached). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap a tile, tap LOCK IN.
+cached). Keys: A/D or arrows browse, J/Enter lock in, Esc unlock/leave. Touch: tap a tile, tap SIGN OFF.
 
 **Intro swing**: when both lock in (or accept a rematch), the ring switches to your opponent's floor
 under the wipe (you fight on their turf) and they appear taunting. Over 2.5 s the camera circles your

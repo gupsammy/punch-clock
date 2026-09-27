@@ -310,7 +310,7 @@ export class Versus {
       return true;
     }
     if (action === 'haymaker') {
-      if (p.meter < 100) { if (p.state === 'idle') this.ctx.ui.popup('SPECIAL NOT READY'); return true; }
+      if (p.meter < 100) { if (p.state === 'idle') this.ctx.ui.popup('SPECIAL PENDING APPROVAL'); return true; }
       if (!this.canAct()) return false;
       this.startSpecial();
       return true;
@@ -942,7 +942,7 @@ export class Versus {
     audio.bell(3);
     audio.stopMusic(1.5);
     ui.callout('TIME!', { size: 'xxl', color: '#ffd23f', dur: 1.6 });
-    this.after(1.7, () => ui.callout(win ? 'YOU WIN ON POINTS' : 'LOST ON POINTS', { size: 'l', color: win ? '#3dff7a' : '#ff2e55', dur: 1.6 }));
+    this.after(1.7, () => ui.callout(win ? 'WON ON KPIs' : 'MISSED KPIs', { size: 'l', color: win ? '#3dff7a' : '#ff2e55', dur: 1.6 }));
     this.after(0.4, () => { this.snapshot = this.ctx.capture(); });
     this.after(3.6, () => this.finish(win, 'decision'));
   }

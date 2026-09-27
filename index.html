@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <title>PUNCH CLOCK — a corporate boxing game you play in your browser</title>
-<meta name="description" content="A free 3D boxing game for the browser. You've been laid off, so punch your way from the mailroom to the penthouse: the intern, Brenda from HR, the VP of Synergy, and the CEO. No download, works on phone and desktop." />
+<meta name="description" content="A free 3D boxing game for the browser. You've been laid off, so punch your way from the mailroom to the penthouse: the intern, Brenda from HR, the VP of Synergy, and the CEO. Or book a 1:1 with a colleague and fight them online. No download, works on phone and desktop." />
 <link rel="canonical" href="https://punch-clock-game.vercel.app/" />
 <meta name="theme-color" content="#07050a" />
 <meta name="google-site-verification" content="msqNVSCAuU-5tHsx3NMVsJCnlgbcY3R6GgLLFD7WT6Q" />
@@ -12,7 +12,7 @@
 <meta property="og:site_name" content="PUNCH CLOCK" />
 <meta property="og:url" content="https://punch-clock-game.vercel.app/" />
 <meta property="og:title" content="PUNCH CLOCK — a corporate boxing simulator" />
-<meta property="og:description" content="Punch your way from the mailroom to the penthouse. Brenda from HR is waiting." />
+<meta property="og:description" content="Punch your way from the mailroom to the penthouse, or take a colleague 1:1. Brenda from HR is waiting." />
 <meta property="og:image" content="https://punch-clock-game.vercel.app/og.jpg" />
 <meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="1200" />
@@ -20,7 +20,8 @@
 <meta property="og:image:alt" content="Brenda from HR throws a punch at you in a boxing ring, under a neon sign reading WE ARE A FAMILY." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="PUNCH CLOCK — a corporate boxing simulator" />
-<meta name="twitter:description" content="Punch your way from the mailroom to the penthouse. Brenda from HR is waiting." />
+<meta name="twitter:description" content="Punch your way from the mailroom to the penthouse, or take a colleague 1:1. Brenda from HR is waiting." />
+<meta name="twitter:creator" content="@samarthg1911" />
 <meta name="twitter:image" content="https://punch-clock-game.vercel.app/og.jpg" />
 <script type="application/ld+json">
 {
@@ -30,12 +31,13 @@
   "alternateName": "Punch Clock: a corporate boxing simulator",
   "url": "https://punch-clock-game.vercel.app/",
   "image": "https://punch-clock-game.vercel.app/og.jpg",
-  "description": "A free 3D boxing game for the browser. You've been laid off, so punch your way from the mailroom to the penthouse, one manager at a time.",
+  "description": "A free 3D boxing game for the browser. You've been laid off, so punch your way from the mailroom to the penthouse, one manager at a time. Or book a 1:1 with a colleague and fight them online.",
   "genre": ["Boxing", "Fighting", "Comedy"],
   "gamePlatform": ["Web browser", "Mobile web browser"],
   "applicationCategory": "Game",
   "operatingSystem": "Any",
-  "playMode": "SinglePlayer",
+  "playMode": ["SinglePlayer", "MultiPlayer"],
+  "author": { "@type": "Person", "name": "Samarth Gupta", "url": "https://x.com/samarthg1911", "sameAs": ["https://github.com/gupsammy"] },
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
@@ -101,16 +103,19 @@
     <p class="blurb">You've been laid off. HR says there's one opening left.<br>It's on the top floor.</p>
     <div class="menu modes">
       <button class="btn big" data-act="start">CLOCK IN<small>STORY · 6 FLOORS</small></button>
-      <button class="btn" data-act="shift">DAILY CHALLENGE<small id="shiftSub">NEW EVERY DAY</small></button>
-      <button class="btn" data-act="vs">VS A FRIEND<small>1V1 ONLINE</small></button>
+      <button class="btn" data-act="shift">DAILY SHIFT<small id="shiftSub">NEW EVERY DAY</small></button>
+      <button class="btn" data-act="vs">VS A COLLEAGUE<small>1:1 MEETING · ONLINE</small></button>
     </div>
     <div class="menu links">
-      <button class="btn ghost" data-act="howto">HOW TO FIGHT</button>
+      <button class="btn ghost" data-act="howto">EMPLOYEE HANDBOOK</button>
       <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>
     </div>
   </div>
-  <p class="fine">PUNCH CLOCK is not affiliated with your employer. Any resemblance to your manager is deliberate.
-    No interns were paid in the making of this game.</p>
+  <footer class="foot">
+    <p class="fine">PUNCH CLOCK is not affiliated with your employer. Any resemblance to your manager is deliberate.
+      No interns were paid in the making of this game.</p>
+    <p class="made">MADE BY <a href="https://x.com/samarthg1911" target="_blank" rel="noopener">@samarthg1911</a><span aria-hidden="true">·</span><a href="https://github.com/gupsammy/punch-clock" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>SOURCE</a></p>
+  </footer>
 </section>
 
 <!-- ============ ELEVATOR / FLOOR SELECT ============ -->
@@ -189,17 +194,17 @@
   </div>
 </section>
 
-<!-- ============ 1V1 MENU / HOST / JOIN ============ -->
+<!-- ============ 1:1 MENU / HOST / JOIN ============ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 3v12M7 8l5-5 5 5M5 13v8h14v-8"/></symbol>
 </svg>
 <section id="vsMenu" class="screen hidden">
   <div class="vs-wrap">
-    <header class="vs-head"><h2>VS A FRIEND</h2><p>1V1 · ONLINE · ANY PHONE OR COMPUTER</p></header>
+    <header class="vs-head"><h2>VS A COLLEAGUE</h2><p>1:1 MEETING · ANY PHONE OR COMPUTER</p></header>
     <div class="menu col vs-pick">
-      <button class="btn big" data-act="vsHost">HOST A MATCH<small>GET A CODE TO SEND YOUR FRIEND</small></button>
-      <button class="btn" data-act="vsJoin">JOIN A MATCH<small>TYPE THE CODE YOUR FRIEND SENT</small></button>
+      <button class="btn big" data-act="vsHost">BOOK A 1:1<small>GET A MEETING ID FOR YOUR COLLEAGUE</small></button>
+      <button class="btn" data-act="vsJoin">JOIN A 1:1<small>TYPE THE MEETING ID YOU WERE SENT</small></button>
     </div>
     <div class="menu"><button class="btn ghost" data-act="back">BACK</button></div>
   </div>
@@ -207,13 +212,13 @@
 
 <section id="vsLobby" class="screen hidden">
   <div class="vs-wrap">
-    <header class="vs-head"><h2>YOUR ROOM</h2><p>SEND THIS TO ONE FRIEND</p></header>
+    <header class="vs-head"><h2>MEETING ROOM 4B</h2><p>INVITE ONE COLLEAGUE</p></header>
     <div class="paper slip">
-      <div class="slip-cap">ROOM CODE</div>
+      <div class="slip-cap">MEETING ID</div>
       <div class="cells" id="vlCells"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="chips">
-        <button class="chip" data-act="vsSend" id="vlShare"><svg><use href="#i-share"/></svg><span>SHARE LINK</span></button>
-        <button class="chip" data-act="vsCopyCode"><svg><use href="#i-copy"/></svg><span>COPY CODE</span></button>
+        <button class="chip" data-act="vsSend" id="vlShare"><svg><use href="#i-share"/></svg><span>INVITE</span></button>
+        <button class="chip" data-act="vsCopyCode"><svg><use href="#i-copy"/></svg><span>COPY ID</span></button>
       </div>
       <p class="vl-link" id="vlLink"></p>
     </div>
@@ -224,9 +229,9 @@
 
 <section id="vsJoin" class="screen hidden">
   <div class="vs-wrap">
-    <header class="vs-head"><h2>JOIN A MATCH</h2><p>TYPE YOUR FRIEND'S CODE</p></header>
+    <header class="vs-head"><h2>JOIN A 1:1</h2><p>TYPE THE MEETING ID YOU WERE SENT</p></header>
     <form class="paper slip" id="vjForm">
-      <label class="slip-cap" for="vjInput">ROOM CODE</label>
+      <label class="slip-cap" for="vjInput">MEETING ID</label>
       <div class="cells entry" id="vjCells">
         <input id="vjInput" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go">
         <i></i><i></i><i></i><i></i><i></i><i></i>
@@ -240,9 +245,9 @@
   </div>
 </section>
 
-<!-- ============ 1V1 SELECT ============ -->
+<!-- ============ 1:1 SELECT ============ -->
 <section id="vsSelect" class="screen hidden">
-  <div class="sel-top"><b>CHOOSE YOUR EMPLOYEE</b><span id="selThem">OPPONENT IS BROWSING</span></div>
+  <div class="sel-top"><b>CHOOSE YOUR EMPLOYEE</b><span id="selThem">COLLEAGUE IS BROWSING</span></div>
   <div class="sel-card">
     <div class="d-floor" id="scFloor"></div>
     <h2 id="scName"></h2>
@@ -256,13 +261,13 @@
     <p class="sel-hint hidden" id="selHint">Beat a boss in the story to unlock them here</p>
     <div class="sel-grid" id="selGrid"></div>
     <div class="sel-actions">
-      <button class="btn big" data-act="vsLock" id="selLock">LOCK IN</button>
-      <button class="btn ghost" data-act="vsLeave">LEAVE</button>
+      <button class="btn big" data-act="vsLock" id="selLock">SIGN OFF</button>
+      <button class="btn ghost" data-act="vsLeave">LEAVE MEETING</button>
     </div>
   </div>
 </section>
 
-<!-- ============ 1V1 RESULT ============ -->
+<!-- ============ 1:1 RESULT ============ -->
 <section id="vsEnd" class="screen hidden">
   <div class="fired-wrap vs-end">
     <div class="fired-big" id="veBig"></div>
@@ -270,9 +275,9 @@
     <table class="ve-rows" id="veRows"></table>
     <div class="fired-sick" id="veAgain"></div>
     <div class="menu row">
-      <button class="btn big" data-act="vsAgain" id="veAgainBtn">REMATCH</button>
-      <button class="btn" data-act="vsPick">NEW FIGHTERS</button>
-      <button class="btn ghost" data-act="vsLeave">LEAVE</button>
+      <button class="btn big" data-act="vsAgain" id="veAgainBtn">SCHEDULE FOLLOW-UP</button>
+      <button class="btn" data-act="vsPick">REORG</button>
+      <button class="btn ghost" data-act="vsLeave">LEAVE MEETING</button>
     </div>
   </div>
 </section>
@@ -301,12 +306,12 @@
       <div class="r-note"><span>MANAGER'S NOTE:</span><em id="rNote"></em></div>
       <div class="r-promo hidden" id="rPromo"><span>PROMOTED TO</span><b></b><em></em></div>
       <div class="stamp hidden" id="rStamp"><b></b><span></span></div>
-      <div class="pb hidden" id="rPB">NEW PERSONAL BEST</div>
+      <div class="pb hidden" id="rPB">EMPLOYEE OF THE MONTH</div>
     </div>
     <div class="r-actions">
       <button class="btn big" data-act="next" id="nextBtn">NEXT FLOOR ▶</button>
       <button class="btn" data-act="share">SHARE CARD</button>
-      <button class="btn ghost run-hide" data-act="retry">RETRY<span class="key"> (R)</span></button>
+      <button class="btn ghost run-hide" data-act="retry">APPEAL REVIEW<span class="key"> (R)</span></button>
       <button class="btn ghost run-hide" data-act="elevator">ELEVATOR</button>
     </div>
   </div>
@@ -379,7 +384,7 @@
       <tr><td>Haymaker</td><td>SPACE</td><td>swipe ↑</td><td>Y / △</td></tr>
       <tr><td>Retry · Pause</td><td>R · ESC</td><td>tap ❚❚</td><td>SELECT · START</td></tr>
     </table>
-    <div class="r-actions"><button class="btn big" data-act="closeHowto">GOT IT</button></div>
+    <div class="r-actions"><button class="btn big" data-act="closeHowto">I HAVE READ AND AGREE</button></div>
   </div>
 </section>
 
@@ -387,9 +392,9 @@
 <section id="pause" class="screen hidden">
   <div class="menu col">
     <div class="pause-t">ON BREAK</div>
-    <button class="btn big" data-act="resume">RESUME</button>
+    <button class="btn big" data-act="resume">BACK TO WORK</button>
     <button class="btn run-hide" data-act="retry">RESTART FIGHT</button>
-    <button class="btn" data-act="howto">HOW TO FIGHT</button>
+    <button class="btn" data-act="howto">EMPLOYEE HANDBOOK</button>
     <button class="btn ghost" data-act="mute">TOGGLE SOUND</button>
     <button class="btn ghost" data-act="quit" id="quitBtn">QUIT TO ELEVATOR</button>
   </div>
