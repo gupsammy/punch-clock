@@ -1265,7 +1265,6 @@ document.addEventListener('click', (e) => {
 });
 // a screen change hides the card mid-punch (animationcancel); without this the punch replays on return
 for (const ev of ['animationend', 'animationcancel']) document.addEventListener(ev, (e) => { if (e.animationName === 'punchHole') e.target.classList.remove('punched'); });
-$('#title').addEventListener('click', (e) => { if (!e.target.closest('button')) { audio.init(); toElevator(); } });
 $('#intro').addEventListener('click', () => { if (vs) return; introT = 99; beginFight(); });
 $('#muteBtn').textContent = `SOUND: ${audio.muted ? 'OFF' : 'ON'}`;
 
@@ -1280,7 +1279,8 @@ input.on((action, down, src) => {
   if (share) { if (action === 'pause') overlay('share', false); return; }
   switch (screen) {
     case 'title':
-      if (action === 'any' || action === 'confirm') toElevator();
+      // touch and mouse act only through the menu buttons, so a tap that misses one does nothing
+      if (action === 'confirm' || ((action === 'jabL' || action === 'jabR') && (src === 'key' || src === 'pad'))) toElevator();
       break;
     case 'elevator': {
       if (action === 'left' || action === 'duck') selectFloor(Math.max(0, current - 1));

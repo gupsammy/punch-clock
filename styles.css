@@ -106,7 +106,6 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 #title .modes { flex-wrap: nowrap; align-items: stretch; }
 #title .modes .btn { flex: 0 1 240px; min-width: 0; }
 #title .links { gap: 24px; }
-.press { font: 800 var(--fs-cap) var(--mono); letter-spacing: .3em; color: #fff; opacity: .8; animation: blink 1.1s steps(2) infinite; margin: 4px 0 0; }
 @keyframes blink { 50% { opacity: 0; } }
 .fine { position: absolute; bottom: calc(12px + var(--safe-b)); left: 0; right: 0; text-align: center; font-size: var(--fs-cap); color: rgba(255,255,255,.45); padding: 0 20px; line-height: 1.5; margin: 0; }
 
@@ -634,5 +633,4 @@ body.vs #hudScore, body.vs #invoice, body.vs .intro-skip { display: none; }
   .sub { margin-top: 8px; }
   .title-wrap { gap: 8px; }
   .card-holes { display: none; }
-  .press { display: none; }
 }
