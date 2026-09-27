@@ -250,7 +250,8 @@ function selectFloor(i) {
   $('#dName').textContent = d.name;
   $('#dTitle').textContent = d.title;
   $('#dTag').textContent = d.tagline;
-  $('#dStats').innerHTML = d.stats.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  // phones show the stats inside the memo popup, which leaves room to see the boss (styles.css)
+  $('#dStats').innerHTML = $('#dMemoStats').innerHTML = d.stats.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#dMemo').textContent = d.memo;
   const best = save.best[d.id];
   $('#dBest').textContent = best ? `BEST: ${fmtTime(best.time)} · GRADE ${best.grade} · ${best.score.toLocaleString('en-US')} PTS` : '';

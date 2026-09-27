@@ -143,6 +143,8 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 .memo::before { content: ''; position: absolute; top: -8px; left: 40%; width: 72px; height: 16px; background: rgba(255,240,150,.8); transform: rotate(3deg); }
 .memo-head { display: flex; justify-content: space-between; border-bottom: 1px solid #999; padding-bottom: 4px; margin-bottom: 8px; font-size: var(--fs-cap); gap: 12px; }
 .memo p { margin: 0; }
+.memo .memo-stats { display: none; }
+.memo dt { color: #666; }
 .d-actions { display: flex; gap: 16px; align-items: center; margin-top: 4px; }
 /* phones fold the memo into this tag, so the boss has room to stand below the dossier */
 .memo-tag { display: none; align-self: flex-start; min-height: var(--h3); margin-top: 12px; border: 0; cursor: pointer; background: var(--paper); color: #222;
@@ -417,6 +419,8 @@ body.touch .tap { display: inline; }
   #elevator { align-items: flex-start; background: linear-gradient(rgba(7,5,10,.9) 0 45%, rgba(7,5,10,.35) 80%, rgba(7,5,10,.1)); }
   .d-actions { order: 1; }
   .memo-tag { display: block; order: 1; }
+  #dStats { display: none; }
+  .memo .memo-stats { display: grid; margin-top: 10px; padding-top: 8px; border-top: 1px solid #999; }
   /* the open memo sits over a dim cover; the next tap anywhere closes it (main.js) */
   #elevator.memo-open::before { content: ''; position: fixed; inset: 0; z-index: 2; background: rgba(7,5,10,.65); }
   #elevator.memo-open .memo { display: block; position: fixed; left: 16px; right: 16px; top: 50%; z-index: 3; margin: 0 auto;
