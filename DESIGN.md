@@ -61,6 +61,57 @@ panel slide off. The fight itself starts with no wipe. `?clean` hides the tutori
 
 Grades: S "EXCEEDS EXPECTATIONS", A "STRONG PERFORMER", B "MEETS EXPECTATIONS", C "NEEDS IMPROVEMENT", D "PIP".
 
+## UI system
+Every menu, button and HUD element follows these rules; a value outside them is a bug. The tokens
+live at the top of `styles.css`.
+
+**Type**: six sizes.
+
+| Step | Size | Font | Use |
+|---|---|---|---|
+| caption `--fs-cap` | 11 px | mono, caps, tracked | labels, tags, fine print |
+| body `--fs-body` | 14 px | mono | sentences, stats, chip buttons |
+| label `--fs-label` | 18 px | Anton | text buttons, sub-heads, hints |
+| action `--fs-action` | 24 px | Anton | main and secondary buttons |
+| heading `--fs-head` | 36 px | Anton | screen titles |
+| display | `clamp()` by viewport | Anton | one hero per screen: logo, a fighter's name, YOU'RE FIRED, callouts, count |
+
+Handwriting (Caveat) is always action size. LED readouts (fight clock, elevator floor) are mono at
+any step. Nothing is under 11 px. Menus reflow on small screens instead of shrinking text. Two
+exceptions, each one step: under 560 px wide the HUD text drops a step (never below caption), and
+under 520 px tall the select screen's title drops to action.
+
+**Buttons** are time cards: a column of punched holes down the left edge, a slight tilt, a hard
+shadow. A click punches a hole in the card.
+
+| Tier | Class | Look | Height (under 520 px tall) | Label |
+|---|---|---|---|---|
+| main | `.btn.big` | yellow card, tilted out of the rack | 72 (56) | action |
+| secondary | `.btn` | paper card | 64 (48) | action, optional caption line |
+| text | `.btn.ghost` | underlined word | 44 | label |
+| chip | `.chip` | outlined, icon and word | 44 | body, bold |
+
+- One main button per screen, at most two secondary. BACK, LEAVE and CLOSE are text buttons and come last.
+  An overlay opened over another screen (how to fight, share) is opaque, so only one main button is in sight.
+- The title's three mode cards are peers: one row of equal cards that narrow before they wrap (stacked under 560 px).
+- Anything you can tap is at least 44 × 44.
+
+**Colour**: a yellow fill is the main action and nothing else; a yellow outline is what you have
+selected (floor, fighter, perk); yellow text marks the one line to read in a block (a job title, a
+stat). Green: ready, locked in. Red: danger, damage, FIRED. Pink, cyan and the floor colours (`--a`,
+`--b`, set per floor) decorate; they never fill a button.
+
+**Spacing**: multiples of 4 (4, 8, 12, 16, 24, 32, 48); 2 px only inside tags and dense table rows.
+
+**Fit**: on a 360 × 640 phone held either way, every screen's main button is on screen without
+scrolling. Screens with more content scroll and pin their action row to the bottom.
+
+**HUD**, loudest to quietest: (1) HP bars, the largest HUD element; (2) clock, OVERTIME meter,
+knockdown pips; (3) names, titles, score, chat. Nothing stays in the middle third of the screen, where
+the opponent stands; only callouts cross it, and briefly. The touch pause button is 44 × 44 and
+overlaps nothing. The top of the HUD is a grid (bars, clock, bars; then chat and invoice; then combo),
+so each row starts below everything above it; no HUD element sets its own `top`.
+
 ## Daily Shift (career run)
 A second mode beside the ladder. Title → **DAILY CHALLENGE** (caption `#N · NEW EACH DAY`; in-game it is the shift) → shift memo (today's modifier, pick one
 perk) → all six floors back to back, no elevator. N = days since 2026-09-01; everyone gets the same

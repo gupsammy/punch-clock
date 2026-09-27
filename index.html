@@ -66,6 +66,7 @@
     <div class="floor" id="hudFloor">FLOOR B1</div>
     <div class="digits" id="hudTime">00:00.00</div>
     <div class="score" id="hudScore">0</div>
+    <button id="pauseBtn" class="chip" data-act="pause" aria-label="Pause">❚❚</button>
   </div>
   <div class="bar-block opp">
     <div class="who"><span class="nm" id="oppName">KYLE</span><span class="tt" id="oppTitle">UNPAID INTERN</span></div>
@@ -79,7 +80,6 @@
     <div class="track"><i></i><s></s><s></s><s></s></div>
   </div>
   <div id="combo"></div>
-  <button id="pauseBtn" data-act="pause" aria-label="Pause">❚❚</button>
   <div id="feed" class="hidden"><div class="head"><span class="live">LIVE</span><b class="chan"></b><span class="eye"><span class="online"></span></span><span class="extra"></span></div><div class="msgs"></div><div class="floats"></div></div>
 </div>
 
@@ -99,11 +99,13 @@
     <h1 class="logo"><span>PUNCH</span><span>CLOCK</span></h1>
     <p class="sub">A CORPORATE BOXING SIMULATOR</p>
     <p class="blurb">You've been laid off. HR says there's one opening left.<br>It's on the top floor.</p>
-    <div class="menu">
-      <button class="btn big mode m-play" data-act="start">CLOCK IN<small>STORY · 6 FLOORS</small></button>
-      <button class="btn mode m-daily" data-act="shift">DAILY CHALLENGE<small id="shiftSub">NEW EVERY DAY</small></button>
-      <button class="btn mode m-vs" data-act="vs">VS A FRIEND<small>1V1 ONLINE</small></button>
-      <button class="btn" data-act="howto">HOW TO FIGHT</button>
+    <div class="menu modes">
+      <button class="btn big" data-act="start">CLOCK IN<small>STORY · 6 FLOORS</small></button>
+      <button class="btn" data-act="shift">DAILY CHALLENGE<small id="shiftSub">NEW EVERY DAY</small></button>
+      <button class="btn" data-act="vs">VS A FRIEND<small>1V1 ONLINE</small></button>
+    </div>
+    <div class="menu links">
+      <button class="btn ghost" data-act="howto">HOW TO FIGHT</button>
       <button class="btn ghost" data-act="mute" id="muteBtn">SOUND: ON</button>
     </div>
     <p class="press"><span class="key">PRESS ANY KEY</span><span class="tap">TAP ANYWHERE</span></p>
@@ -187,32 +189,53 @@
   </div>
 </section>
 
-<!-- ============ 1V1 LOBBY ============ -->
-<section id="vsLobby" class="screen hidden">
-  <div class="shift-wrap">
-    <div class="paper shift-paper">
-      <div class="r-head">
-        <div><b>1V1 · MEETING INVITE</b><span>ONE ROOM · TWO EMPLOYEES</span></div>
-        <div class="r-logo">PUNCH<br>CLOCK</div>
-      </div>
-      <div class="vl-label" id="vlLabel">YOUR ROOM CODE</div>
-      <button class="vl-code" id="vlCode" data-act="vsCopyCode" aria-label="Copy room code"></button>
-      <p class="vl-status" id="vlStatus"></p>
-      <div class="vl-send" id="vlSend">
-        <button class="btn big" data-act="vsSend" id="vlSendBtn">SEND INVITE LINK</button>
-        <button class="btn dark" data-act="vsCopyCode" id="vlCopyCode">COPY CODE</button>
-      </div>
-      <form class="vl-join" id="vlJoin">
-        <label for="vlInput">GOT A CODE FROM A FRIEND?</label>
-        <div class="vl-row">
-          <input id="vlInput" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
-            placeholder="ABC234" enterkeyhint="go" aria-label="Friend's room code">
-          <button class="btn dark" type="submit" id="vlJoinBtn" disabled>JOIN</button>
-        </div>
-      </form>
+<!-- ============ 1V1 MENU / HOST / JOIN ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 3v12M7 8l5-5 5 5M5 13v8h14v-8"/></symbol>
+</svg>
+<section id="vsMenu" class="screen hidden">
+  <div class="vs-wrap">
+    <header class="vs-head"><h2>VS A FRIEND</h2><p>1V1 · ONLINE · ANY PHONE OR COMPUTER</p></header>
+    <div class="menu col vs-pick">
+      <button class="btn big" data-act="vsHost">HOST A MATCH<small>GET A CODE TO SEND YOUR FRIEND</small></button>
+      <button class="btn" data-act="vsJoin">JOIN A MATCH<small>TYPE THE CODE YOUR FRIEND SENT</small></button>
     </div>
-    <div class="r-actions">
-      <button class="btn ghost" data-act="vsLeave">BACK</button>
+    <div class="menu"><button class="btn ghost" data-act="back">BACK</button></div>
+  </div>
+</section>
+
+<section id="vsLobby" class="screen hidden">
+  <div class="vs-wrap">
+    <header class="vs-head"><h2>YOUR ROOM</h2><p>SEND THIS TO ONE FRIEND</p></header>
+    <div class="paper slip">
+      <div class="slip-cap">ROOM CODE</div>
+      <div class="cells" id="vlCells"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="chips">
+        <button class="chip" data-act="vsSend" id="vlShare"><svg><use href="#i-share"/></svg><span>SHARE LINK</span></button>
+        <button class="chip" data-act="vsCopyCode"><svg><use href="#i-copy"/></svg><span>COPY CODE</span></button>
+      </div>
+      <p class="vl-link" id="vlLink"></p>
+    </div>
+    <p class="vl-status" id="vlStatus"></p>
+    <div class="menu"><button class="btn ghost" data-act="vsBack">BACK</button></div>
+  </div>
+</section>
+
+<section id="vsJoin" class="screen hidden">
+  <div class="vs-wrap">
+    <header class="vs-head"><h2>JOIN A MATCH</h2><p>TYPE YOUR FRIEND'S CODE</p></header>
+    <form class="paper slip" id="vjForm">
+      <label class="slip-cap" for="vjInput">ROOM CODE</label>
+      <div class="cells entry" id="vjCells">
+        <input id="vjInput" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go">
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </form>
+    <p class="vl-status" id="vjStatus"></p>
+    <div class="menu col">
+      <button class="btn big" type="submit" form="vjForm" id="vjBtn" disabled>JOIN</button>
+      <button class="btn ghost" data-act="vsBack">BACK</button>
     </div>
   </div>
 </section>
@@ -312,11 +335,11 @@
     <p>Your first act as CEO: laying off everyone you just punched.<br>Shareholders are thrilled. Nobody else is. Compensation package: exposure.</p>
     <div class="end-memo"><b>NEW MEMO · FROM: THE BOARD</b>Congratulations on your appointment. As CEO, your first performance review is scheduled for Monday in the Mailroom. Kyle will be conducting it. He has been practising. He also signed for package #4411 on your behalf. It is a mug. It says WORLD'S BEST CEO.</div>
     <div class="end-total" id="endTotal"></div>
-    <div class="menu row">
+    <p class="fine">Thanks for playing PUNCH CLOCK. Please return your badge on the way out.</p>
+    <div class="r-actions">
       <button class="btn big" data-act="elevator">CONTINUE</button>
       <button class="btn" data-act="share">SHARE CARD</button>
     </div>
-    <p class="fine">Thanks for playing PUNCH CLOCK. Please return your badge on the way out.</p>
   </div>
 </section>
 
@@ -356,7 +379,7 @@
       <tr><td>Haymaker</td><td>SPACE</td><td>swipe ↑</td><td>Y / △</td></tr>
       <tr><td>Retry · Pause</td><td>R · ESC</td><td>tap ❚❚</td><td>SELECT · START</td></tr>
     </table>
-    <button class="btn big" data-act="closeHowto">GOT IT</button>
+    <div class="r-actions"><button class="btn big" data-act="closeHowto">GOT IT</button></div>
   </div>
 </section>
 

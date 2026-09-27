@@ -159,7 +159,7 @@ ui.setProjector(() => {
 const wipe = $('#wipe');
 wipe.addEventListener('animationend', () => wipe.classList.remove('go'));
 function show(id) {
-  const from = document.querySelector(':is(#title, #elevator, #shift, #shiftEnd, #intro, #results, #fired, #ending, #vsLobby, #vsSelect, #vsEnd):not(.hidden)');
+  const from = document.querySelector(':is(#title, #elevator, #shift, #shiftEnd, #intro, #results, #fired, #ending, #vsMenu, #vsLobby, #vsJoin, #vsSelect, #vsEnd):not(.hidden)');
   // wipe between menu screens; into the fight (id null) the intro card clears on its own
   if (id && from && from.id !== id) { wipe.classList.remove('go'); void wipe.offsetWidth; wipe.classList.add('go'); }
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('hidden', s.id !== id);
@@ -597,7 +597,8 @@ function vsLink() {
   if (vs.local) q.set('net', 'local');
   return `${location.origin}${location.pathname}?${q}`;
 }
-function vsStatus(text, cls = '') { const el = $('#vlStatus'); el.textContent = text; el.className = 'vl-status ' + cls; }
+function vsStatus(text, cls = '') { for (const el of document.querySelectorAll('.vl-status')) { el.textContent = text; el.className = 'vl-status ' + cls; } }
+const vsSaved = () => { const i = save.vsPick ?? 0; return vsOpen(i) ? i : 0; };
 
 function startVersus(code, creator) {
   vsClose();
@@ -605,8 +606,7 @@ function startVersus(code, creator) {
   run = null; fight = null; paused = false; overlay('pause', false);
   document.body.classList.remove('in-run');
   const q = new URLSearchParams(location.search);
-  const saved = save.vsPick ?? 0;
-  vs = { code, creator, net: null, gen: 0, peer: false, gotHi: false, host: false, r: Math.random(), me: vsOpen(saved) ? saved : 0, them: null,
+  vs = { code, creator, net: null, gen: 0, peer: false, gotHi: false, host: false, r: Math.random(), me: vsSaved(), them: null,
     meReady: false, themReady: false, again: { me: false, them: false }, local: q.get('net') === 'local', lag: +q.get('lag') || 0 };
   history.replaceState(null, '', vsLink());
   toVsLobby();
@@ -647,27 +647,60 @@ function vsLeave() {
   toTitle();
 }
 
-function toVsLobby() {
-  screen = 'vsLobby';
+// Every versus screen before the match stands your pick in the ring, showing off.
+function vsBackdrop(i) {
   fight = null; vsMenu = false; overlay('pause', false);
   input.setHoldMode(false);
   document.body.classList.remove('vs');
   ui.showHud(false); ui.clearTransient();
   time.reset(); fx.clear(); arena.blackout(false);
   post.fx.dark = 0; post.fx.sat = 1; post.fx.lowHp = 0;
-  const d = ROSTER[vs.me];
-  setFighter(vs.me); applyTheme(d); fighter.reset();
+  const d = ROSTER[i];
+  setFighter(i); applyTheme(d); fighter.reset();
   fighter.setPose(tauntPoseOf(d), 80, 10); fighter.setExpr('taunt');
   player.reset();
   player.setMenu(new THREE.Vector3(1.2, 1.7, 1.6), new THREE.Vector3(0.4, 1.3, -0.6), true);
-  // a guest is in someone else's room: nothing to send, but they can still switch to another code
-  $('#vlLabel').textContent = vs.creator ? 'YOUR ROOM CODE' : 'ROOM CODE';
-  $('#vlCode').textContent = vs.code;
-  $('#vlSend').classList.toggle('hidden', !vs.creator);
-  $('#vlInput').value = ''; $('#vlJoinBtn').disabled = true;
-  vsStatus(vs.creator ? 'Waiting for your friend. Keep this screen open until they join' : `Joining room ${vs.code}`, 'wait');
-  show('vsLobby');
   audio.playMusic('elevator');
+}
+
+// VS A FRIEND: host or join. Coming back here drops any room you were in.
+function toVsMenu() {
+  vsClose();
+  history.replaceState(null, '', location.pathname);
+  screen = 'vsMenu';
+  vsBackdrop(vsSaved());
+  show('vsMenu');
+}
+
+// Join, fresh from the menu: the code boxes, empty, ready to type into
+function toVsJoin() {
+  screen = 'vsJoin';
+  vsBackdrop(vsSaved());
+  vsStatus('');
+  $('#vjInput').value = '';
+  renderJoin();
+  show('vsJoin');
+  $('#vjInput').focus({ preventScroll: true });
+}
+
+// A room is open: the host sees its code to send, a guest the join screen with the code it is joining.
+function toVsLobby() {
+  vsBackdrop(vs.me);
+  if (vs.creator) {
+    screen = 'vsLobby';
+    $('#vlCells').querySelectorAll('i').forEach((c, k) => { c.textContent = vs.code[k]; });
+    $('#vlLink').textContent = vsLink().replace(/^https?:\/\//, '');
+    $('#vlShare span').textContent = canShare ? 'SHARE LINK' : 'COPY LINK';
+    $('#vlShare use').setAttribute('href', canShare ? '#i-share' : '#i-copy');
+    vsStatus('Waiting for your friend. Keep this screen open until they join', 'wait');
+    show('vsLobby');
+  } else {
+    screen = 'vsJoin';
+    $('#vjInput').value = vs.code;
+    renderJoin();
+    vsStatus(`Joining room ${vs.code}`, 'wait');
+    show('vsJoin');
+  }
   // the shader compile is a visible hitch on phones: pay it while waiting, not when the friend arrives
   setTimeout(portraits, 600);
 }
@@ -731,8 +764,8 @@ function toVsSelect() {
   buildTiles();
   show('vsSelect');
   player.reset();
-  vsSelectCam(true);
   vsBrowse(vs.me, true);
+  vsSelectCam(true);
   audio.playMusic('elevator');
 }
 
@@ -746,15 +779,25 @@ function showSelf(d) {
   fighter.corner = true;
   fighter.root.position.z = SELF_Z;
   fighter.root.rotation.y = Math.PI;
+  fighter.update(0, 0, null, 0);   // lays out the skeleton now, so vsSelectCam reads a real head height
   scene.add(fighter.root);
   return true;
 }
 // wide: your fighter stands right of the card; narrow: the card sits on top, so frame them low.
 // Either way the camera stays in front of your opponent's spot, where they appear when the intro starts.
+// Narrow, the card's height changes with each fighter's text and the phone's shape, so the camera
+// tilts until their head sits midway between the card and the tiles.
 function vsSelectCam(snap) {
-  const wide = window.innerWidth > 760 && window.innerWidth > window.innerHeight;
-  if (wide) player.setMenu(new THREE.Vector3(1.05, 1.55, SELF_Z - 1.55), new THREE.Vector3(0.55, 1.35, SELF_Z), snap);
-  else player.setMenu(new THREE.Vector3(0.35, 1.35, SELF_Z - 1.05), new THREE.Vector3(0, 1.75, SELF_Z), snap);
+  // the same query that stacks the select screen into one column (styles.css)
+  const stacked = matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
+  if (!stacked) { player.setMenu(new THREE.Vector3(1.05, 1.55, SELF_Z - 1.55), new THREE.Vector3(0.55, 1.35, SELF_Z), snap); return; }
+  const pos = new THREE.Vector3(0.3, 1.4, SELF_Z - 2);
+  const gapTop = $('.sel-card').getBoundingClientRect().bottom, gapBottom = $('.sel-bottom').getBoundingClientRect().top;
+  const ndcY = 1 - (gapTop + gapBottom) / window.innerHeight;
+  const headY = fighter?.corner ? fighter.headWorld(new THREE.Vector3()).y : 1.6;
+  const dist = Math.hypot(pos.x, SELF_Z - pos.z);
+  const pitch = Math.atan2(headY - pos.y, dist) - Math.atan(ndcY * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  player.setMenu(pos, new THREE.Vector3(0, pos.y + dist * Math.tan(pitch), SELF_Z), snap);
 }
 
 function buildTiles() {
@@ -893,6 +936,7 @@ function renderSelect() {
   fighter.setPose(vs.meReady ? tauntPoseOf(d) : 'guard', 120, 14);
   fighter.setExpr(vs.meReady ? 'taunt' : 'idle');
   fighter.showProp(vs.meReady ? tauntPropOf(d) : null);
+  vsSelectCam(false);
 }
 
 function startVsIntro() {
@@ -1023,32 +1067,48 @@ function vsAgain() {
   vsMaybeGo();
 }
 
+// a chip keeps its icon: only its word changes
 async function flashCopy(b, text, done) {
-  const label = b.textContent;
-  try { await navigator.clipboard.writeText(text); b.textContent = done; }
-  catch { b.textContent = 'COPY FAILED'; }
-  setTimeout(() => { b.textContent = label; }, 1400);
+  const el = b.querySelector('span') || b;
+  el.dataset.label ??= el.textContent;
+  try { await navigator.clipboard.writeText(text); el.textContent = done; }
+  catch { el.textContent = 'COPY FAILED'; }
+  setTimeout(() => { el.textContent = el.dataset.label; }, 1400);
 }
 // phones get the share sheet (WhatsApp, Messages…); desktops copy the link
 function vsSend() {
   const text = `Fight me in PUNCH CLOCK. Loser gets fired. Room code ${vs.code}`;
-  if (navigator.share && document.body.classList.contains('touch')) navigator.share({ title: 'PUNCH CLOCK 1V1', text, url: vsLink() }).catch(() => {});
-  else flashCopy($('#vlSendBtn'), vsLink(), 'LINK COPIED');
+  if (canShare) navigator.share({ title: 'PUNCH CLOCK 1V1', text, url: vsLink() }).catch(() => {});
+  else flashCopy($('#vlShare'), vsLink(), 'LINK COPIED');
+}
+
+// The six boxes draw what's typed into one invisible input laid over them (one field for the phone
+// keyboard, autofill and paste). JOIN opens at six characters and shows JOINING… while that code is live.
+const vjInput = $('#vjInput');
+function renderJoin() {
+  const v = vjInput.value;
+  const focused = document.activeElement === vjInput;
+  $('#vjCells').querySelectorAll('i').forEach((c, k) => { c.textContent = v[k] || ''; c.classList.toggle('cur', focused && k === v.length); });
+  const joining = !!vs && !vs.creator && vs.code === v;
+  const btn = $('#vjBtn');
+  btn.textContent = joining ? 'JOINING…' : 'JOIN';
+  btn.disabled = v.length !== 6 || joining;
 }
 function vsJoinCode() {
-  const code = cleanCode($('#vlInput').value);
-  if (code.length !== 6) return;
-  if (code === vs.code) { vsStatus('That is your own code. Send it to your friend, or type theirs.', 'bad'); return; }
-  $('#vlInput').blur();
+  const code = cleanCode(vjInput.value);
+  if (code.length !== 6 || (vs && vs.code === code)) return;
+  vjInput.blur();
   audio.uiSelect();
   startVersus(code, false);
 }
-$('#vlInput').addEventListener('input', (e) => {
-  const v = cleanCode(e.target.value);
-  if (e.target.value !== v) e.target.value = v;
-  $('#vlJoinBtn').disabled = v.length !== 6;
+vjInput.addEventListener('input', () => {
+  const v = cleanCode(vjInput.value);
+  if (vjInput.value !== v) vjInput.value = v;
+  renderJoin();
 });
-$('#vlJoin').addEventListener('submit', (e) => { e.preventDefault(); vsJoinCode(); });
+vjInput.addEventListener('focus', renderJoin);
+vjInput.addEventListener('blur', renderJoin);
+$('#vjForm').addEventListener('submit', (e) => { e.preventDefault(); vsJoinCode(); });
 
 // ---------- share ----------
 async function openShare() {
@@ -1144,7 +1204,7 @@ function setPause(on) {
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = performance.now(); if (screen === 'fight' && !paused && !vs) setPause(true); return; }
-  if (vs && !vs.peer && screen === 'vsLobby' && performance.now() - hiddenAt > 5000) vsConnect();
+  if (vs && !vs.peer && (screen === 'vsLobby' || screen === 'vsJoin') && performance.now() - hiddenAt > 5000) vsConnect();
 });
 
 // ---------- buttons ----------
@@ -1183,9 +1243,12 @@ document.addEventListener('click', (e) => {
     case 'closeShare': overlay('share', false); $('#shareVid').pause(); break;
     case 'shareTab': setShareTab(b.dataset.tab); break;
     case 'resume': setPause(false); break;
-    case 'vs': startVersus(newCode(), true); break;
+    case 'vs': toVsMenu(); break;
+    case 'vsHost': startVersus(newCode(), true); break;
+    case 'vsJoin': toVsJoin(); break;
+    case 'vsBack': toVsMenu(); break;
     case 'vsSend': vsSend(); break;
-    case 'vsCopyCode': flashCopy(b, vs.code, b.id === 'vlCode' ? 'COPIED' : 'CODE COPIED'); break;
+    case 'vsCopyCode': flashCopy(b, vs.code, 'CODE COPIED'); break;
     case 'vsLeave': vsLeave(); break;
     case 'vsLock': vsLock(!vs?.meReady); break;
     case 'vsTile': vsBrowse(+b.dataset.i); break;
@@ -1194,6 +1257,14 @@ document.addEventListener('click', (e) => {
     case 'pause': setPause(true); break;
   }
 });
+// a clicked card gets a hole punched in it (DESIGN.md "UI system")
+document.addEventListener('click', (e) => {
+  const c = e.target.closest('.btn:not(.ghost)');
+  if (!c) return;
+  c.classList.remove('punched'); void c.offsetWidth; c.classList.add('punched');
+});
+// a screen change hides the card mid-punch (animationcancel); without this the punch replays on return
+for (const ev of ['animationend', 'animationcancel']) document.addEventListener(ev, (e) => { if (e.animationName === 'punchHole') e.target.classList.remove('punched'); });
 $('#title').addEventListener('click', (e) => { if (!e.target.closest('button')) { audio.init(); toElevator(); } });
 $('#intro').addEventListener('click', () => { if (vs) return; introT = 99; beginFight(); });
 $('#muteBtn').textContent = `SOUND: ${audio.muted ? 'OFF' : 'ON'}`;
@@ -1259,9 +1330,17 @@ input.on((action, down, src) => {
     case 'ending':
       if (action === 'confirm' || action === 'pause') toElevator();
       break;
+    case 'vsMenu':
+      if (action === 'confirm') startVersus(newCode(), true);
+      else if (action === 'pause') toTitle();
+      break;
     case 'vsLobby':
-      if (action === 'pause') vsLeave();
-      else if (action === 'confirm' && vs.creator) vsSend();
+      if (action === 'pause') toVsMenu();
+      else if (action === 'confirm') vsSend();
+      break;
+    case 'vsJoin':
+      if (action === 'pause') toVsMenu();
+      else if (action === 'confirm') vsJoinCode();
       break;
     case 'vsSelect':
       if (action === 'left') vsStep(-1);

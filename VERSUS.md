@@ -5,9 +5,14 @@ in front of you. The single-player loop (read, dodge, punish) runs on both sides
 throws telegraphed attacks like a boss and fast punches into openings like the player.
 
 ## Flow
-Title → **VS A FRIEND** → lobby (a fresh room code: SEND INVITE LINK — share sheet on phones, copy on
-desktop — or COPY CODE; or type a friend's code and JOIN) → friend opens the link or types the code →
-**character select** (both, live) → both locked → intro card "YOU vs THEM" → fight → **result** (REMATCH / NEW FIGHTERS / LEAVE).
+Title → **VS A FRIEND** → a menu with two cards:
+- **HOST A MATCH** → *your room*: a fresh 6-character code, the invite link under it, and two chips,
+  SHARE LINK (share sheet where the device has one, else COPY LINK) and COPY CODE.
+- **JOIN A MATCH** → *join*: six code boxes and JOIN. Opening an invite link lands here with the code
+  filled in and already joining; the code can still be changed.
+
+BACK on either goes to the menu; BACK on the menu goes to the title. Friend joins → **character
+select** (both, live) → both locked → intro card "YOU vs THEM" → fight → **result** (REMATCH / NEW FIGHTERS / LEAVE).
 The room creator is the **host**: it starts the fight and owns the round clock. Nothing else differs.
 
 ## Network
