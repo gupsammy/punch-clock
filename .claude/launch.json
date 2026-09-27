@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "punch-clock", "runtimeExecutable": "python3", "runtimeArgs": ["serve.py", "8777", "."], "port": 8777 }
+  ]
+}
