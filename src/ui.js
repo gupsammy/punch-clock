@@ -32,13 +32,15 @@ export const ui = {
   setProjector(fn) { projector = fn; },
   listener: null,     // (kind, text, opt) — lets the clip recorder mirror callouts and speech
 
-  setupFight(data, touch) {
+  // noMeter: today's shift policy cancelled OVERTIME, so the bar reads as struck off instead of empty
+  setupFight(data, touch, noMeter = false) {
     els.oppName.textContent = data.name;
     els.oppTitle.textContent = data.title;
     els.floor.textContent = `FLOOR ${data.floor}`;
     els.invoice.classList.toggle('hidden', !data.bills);
     els.invAmt.textContent = '$0';
-    els.meterKey.textContent = touch ? 'SWIPE ↑' : 'SPACE';
+    els.meterKey.textContent = noMeter ? 'CANCELLED' : touch ? 'SWIPE ↑' : 'SPACE';
+    els.meter.classList.toggle('off', noMeter);
     last = { php: 1, ohp: 1, combo: 0, pkd: -1, okd: -1, meterFull: false, time: '', score: -1, meter: -1 };
     els.pTrail.style.transform = els.pFill.style.transform = 'scaleX(1)';
     els.oTrail.style.transform = els.oFill.style.transform = 'scaleX(1)';

@@ -309,7 +309,7 @@ function startIntro(i) {
   ui.clearTransient();
   ui.showHud(false);
   feed.stop();
-  ui.setupFight(d, isCoarse);
+  ui.setupFight(d, isCoarse, !!run?.mod.noMeter);
   $('#youTitle').textContent = careerTitle(i);
   fight = new Fight(d, i, ctx, run ? { mod: run.mod, perk: run.perk, startHp: run.hp, run } : {});
   fight.intro();
